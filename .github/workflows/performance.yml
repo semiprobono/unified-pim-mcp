@@ -1,0 +1,405 @@
+name: Performance Testing
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  schedule:
+    # Run performance tests weekly on Sunday at 3 AM UTC
+    - cron: '0 3 * * 0'
+  workflow_dispatch:
+    inputs:
+      performance_target:
+        description: 'Performance target (baseline/stress/load)'
+        required: false
+        default: 'baseline'
+        type: choice
+        options:
+        - baseline
+        - stress  
+        - load
+
+jobs:
+  performance-baseline:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.performance_target == 'baseline' || github.event.inputs.performance_target == '' || github.event_name != 'workflow_dispatch'
+    
+    services:
+      chromadb:
+        image: chromadb/chroma:latest
+        ports:
+          - 8000:8000
+        env:
+          CHROMA_SERVER_HOST: 0.0.0.0
+          CHROMA_SERVER_HTTP_PORT: 8000
+          CHROMA_SERVER_GRPC_PORT: 50051
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Use Node.js 20.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20.x
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Warm up services
+      run: |
+        # Wait for ChromaDB to be fully ready
+        timeout 60s bash -c 'until curl -f http://localhost:8000/api/v1/heartbeat; do sleep 2; done'
+        
+        # Warm up the application
+        npm run dev:setup
+
+    - name: Run baseline performance tests
+      run: |
+        echo "🚀 Running baseline performance tests..."
+        
+        # Authentication performance benchmarks
+        echo "Testing OAuth2 flow performance..."
+        npm run benchmark -- --suite=auth --iterations=100
+        
+        # Rate limiter performance benchmarks  
+        echo "Testing rate limiter performance..."
+        npm run benchmark -- --suite=rate-limiter --iterations=1000
+        
+        # Circuit breaker performance benchmarks
+        echo "Testing circuit breaker performance..."
+        npm run benchmark -- --suite=circuit-breaker --iterations=500
+        
+        # Cache performance benchmarks
+        echo "Testing cache performance..."
+        npm run benchmark -- --suite=cache --iterations=200
+        
+        # Graph client performance benchmarks
+        echo "Testing Graph API client performance..."
+        npm run benchmark -- --suite=graph-client --iterations=100
+      env:
+        NODE_ENV: test
+        LOG_LEVEL: error
+        CHROMADB_HOST: localhost
+        CHROMADB_PORT: 8000
+        PERFORMANCE_MODE: baseline
+
+    - name: Analyze performance results
+      run: |
+        echo "# Performance Baseline Report" > performance-report.md
+        echo "Generated on: $(date)" >> performance-report.md
+        echo "" >> performance-report.md
+        
+        # OAuth2 Flow Performance
+        if [ -f benchmark-results/auth-performance.json ]; then
+          echo "## OAuth2 Flow Performance" >> performance-report.md
+          echo "| Metric | Value | Threshold | Status |" >> performance-report.md
+          echo "|--------|-------|-----------|--------|" >> performance-report.md
+          
+          OAUTH_TIME=$(jq -r '.oauth_flow_time_ms' benchmark-results/auth-performance.json)
+          TOKEN_REFRESH_TIME=$(jq -r '.token_refresh_time_ms' benchmark-results/auth-performance.json)
+          
+          # Check against performance baselines
+          check_performance() {
+            local name=$1
+            local value=$2
+            local threshold=$3
+            
+            if (( $(echo "$value <= $threshold" | bc -l) )); then
+              echo "| $name | ${value}ms | <${threshold}ms | ✅ |" >> performance-report.md
+            else
+              echo "| $name | ${value}ms | <${threshold}ms | ❌ |" >> performance-report.md
+            fi
+          }
+          
+          check_performance "OAuth Flow" $OAUTH_TIME 2000
+          check_performance "Token Refresh" $TOKEN_REFRESH_TIME 500
+          echo "" >> performance-report.md
+        fi
+        
+        # Rate Limiter Performance
+        if [ -f benchmark-results/rate-limiter-performance.json ]; then
+          echo "## Rate Limiter Performance" >> performance-report.md
+          echo "| Metric | Value | Threshold | Status |" >> performance-report.md
+          echo "|--------|-------|-----------|--------|" >> performance-report.md
+          
+          RATE_LIMITER_OVERHEAD=$(jq -r '.overhead_per_request_ms' benchmark-results/rate-limiter-performance.json)
+          THROUGHPUT=$(jq -r '.requests_per_second' benchmark-results/rate-limiter-performance.json)
+          
+          if (( $(echo "$RATE_LIMITER_OVERHEAD <= 10" | bc -l) )); then
+            echo "| Overhead per request | ${RATE_LIMITER_OVERHEAD}ms | <10ms | ✅ |" >> performance-report.md
+          else
+            echo "| Overhead per request | ${RATE_LIMITER_OVERHEAD}ms | <10ms | ❌ |" >> performance-report.md
+          fi
+          
+          echo "| Throughput | ${THROUGHPUT} req/s | - | ℹ️ |" >> performance-report.md
+          echo "" >> performance-report.md
+        fi
+        
+        # Cache Performance
+        if [ -f benchmark-results/cache-performance.json ]; then
+          echo "## Cache Performance" >> performance-report.md
+          echo "| Metric | Value | Threshold | Status |" >> performance-report.md
+          echo "|--------|-------|-----------|--------|" >> performance-report.md
+          
+          CACHE_HIT_TIME=$(jq -r '.cache_hit_time_ms' benchmark-results/cache-performance.json)
+          CACHE_MISS_TIME=$(jq -r '.cache_miss_time_ms' benchmark-results/cache-performance.json)
+          SEARCH_TIME=$(jq -r '.search_time_ms' benchmark-results/cache-performance.json)
+          
+          check_performance "Cache Hit" $CACHE_HIT_TIME 50
+          check_performance "Cache Miss" $CACHE_MISS_TIME 500
+          check_performance "Search Query" $SEARCH_TIME 200
+          echo "" >> performance-report.md
+        fi
+
+    - name: Memory usage analysis
+      run: |
+        echo "## Memory Usage Analysis" >> performance-report.md
+        echo "" >> performance-report.md
+        
+        # Analyze memory usage patterns
+        if [ -f benchmark-results/memory-usage.json ]; then
+          PEAK_MEMORY=$(jq -r '.peak_memory_mb' benchmark-results/memory-usage.json)
+          BASELINE_MEMORY=$(jq -r '.baseline_memory_mb' benchmark-results/memory-usage.json)
+          
+          echo "- Peak memory usage: ${PEAK_MEMORY}MB" >> performance-report.md
+          echo "- Baseline memory usage: ${BASELINE_MEMORY}MB" >> performance-report.md
+          echo "- Memory growth: $((PEAK_MEMORY - BASELINE_MEMORY))MB" >> performance-report.md
+          
+          if [ $((PEAK_MEMORY - BASELINE_MEMORY)) -gt 100 ]; then
+            echo "" >> performance-report.md
+            echo "⚠️ **Warning:** Memory usage increased by more than 100MB during testing" >> performance-report.md
+          fi
+        fi
+
+    - name: Upload performance artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: performance-baseline-results
+        path: |
+          benchmark-results/
+          performance-report.md
+          performance-profile.txt
+        retention-days: 30
+
+  stress-testing:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.performance_target == 'stress' || github.event_name == 'schedule'
+    
+    services:
+      chromadb:
+        image: chromadb/chroma:latest
+        ports:
+          - 8000:8000
+        env:
+          CHROMA_SERVER_HOST: 0.0.0.0
+          CHROMA_SERVER_HTTP_PORT: 8000
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Use Node.js 20.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20.x
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run stress tests
+      run: |
+        echo "🔥 Running stress tests..."
+        
+        # High-load authentication tests
+        npm run benchmark -- --suite=auth --iterations=1000 --concurrent=50
+        
+        # Rate limiter under extreme load
+        npm run benchmark -- --suite=rate-limiter --iterations=10000 --concurrent=100
+        
+        # Circuit breaker resilience testing
+        npm run benchmark -- --suite=circuit-breaker --iterations=2000 --failure-rate=30
+        
+        # Cache performance under load
+        npm run benchmark -- --suite=cache --iterations=5000 --concurrent=20
+        
+        # Memory leak detection
+        npm run benchmark -- --suite=memory-leak --duration=300000 # 5 minutes
+      env:
+        NODE_ENV: test
+        LOG_LEVEL: error
+        CHROMADB_HOST: localhost
+        CHROMADB_PORT: 8000
+        PERFORMANCE_MODE: stress
+
+    - name: Analyze stress test results
+      run: |
+        echo "# Stress Test Report" > stress-report.md
+        echo "Generated on: $(date)" >> stress-report.md
+        echo "" >> stress-report.md
+        
+        # Analyze failure rates and recovery times
+        if [ -f benchmark-results/stress-results.json ]; then
+          ERROR_RATE=$(jq -r '.error_rate_percent' benchmark-results/stress-results.json)
+          RECOVERY_TIME=$(jq -r '.recovery_time_ms' benchmark-results/stress-results.json)
+          DEGRADED_PERFORMANCE=$(jq -r '.degraded_performance_percent' benchmark-results/stress-results.json)
+          
+          echo "## Stress Test Results" >> stress-report.md
+          echo "- Error rate under load: ${ERROR_RATE}%" >> stress-report.md
+          echo "- System recovery time: ${RECOVERY_TIME}ms" >> stress-report.md
+          echo "- Performance degradation: ${DEGRADED_PERFORMANCE}%" >> stress-report.md
+          
+          # Failure criteria
+          if (( $(echo "$ERROR_RATE > 5" | bc -l) )); then
+            echo "" >> stress-report.md
+            echo "❌ **FAIL:** Error rate too high (>5%)" >> stress-report.md
+          fi
+          
+          if (( $(echo "$RECOVERY_TIME > 10000" | bc -l) )); then
+            echo "" >> stress-report.md  
+            echo "❌ **FAIL:** Recovery time too slow (>10s)" >> stress-report.md
+          fi
+        fi
+
+    - name: Upload stress test results
+      uses: actions/upload-artifact@v3
+      with:
+        name: stress-test-results
+        path: |
+          benchmark-results/
+          stress-report.md
+        retention-days: 30
+
+  load-testing:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.performance_target == 'load'
+    
+    services:
+      chromadb:
+        image: chromadb/chroma:latest
+        ports:
+          - 8000:8000
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Use Node.js 20.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20.x
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run load tests
+      run: |
+        echo "📊 Running load tests..."
+        
+        # Sustained load testing
+        npm run benchmark -- --suite=load --duration=600000 --ramp-up=60000 --max-users=200
+        
+        # Graph API integration load testing
+        npm run benchmark -- --suite=graph-integration --concurrent=50 --duration=300000
+      env:
+        NODE_ENV: test
+        CHROMADB_HOST: localhost
+        CHROMADB_PORT: 8000
+        PERFORMANCE_MODE: load
+
+    - name: Generate load test report
+      run: |
+        echo "# Load Test Report" > load-report.md
+        echo "" >> load-report.md
+        
+        if [ -f benchmark-results/load-results.json ]; then
+          AVG_RESPONSE_TIME=$(jq -r '.avg_response_time_ms' benchmark-results/load-results.json)
+          P95_RESPONSE_TIME=$(jq -r '.p95_response_time_ms' benchmark-results/load-results.json)
+          THROUGHPUT=$(jq -r '.throughput_rps' benchmark-results/load-results.json)
+          
+          echo "## Load Test Results" >> load-report.md
+          echo "- Average response time: ${AVG_RESPONSE_TIME}ms" >> load-report.md
+          echo "- 95th percentile response time: ${P95_RESPONSE_TIME}ms" >> load-report.md
+          echo "- Throughput: ${THROUGHPUT} requests/second" >> load-report.md
+        fi
+
+    - name: Upload load test results
+      uses: actions/upload-artifact@v3
+      with:
+        name: load-test-results
+        path: |
+          benchmark-results/
+          load-report.md
+
+  performance-comparison:
+    runs-on: ubuntu-latest
+    needs: [performance-baseline]
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: Download artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: performance-baseline-results
+        path: ./pr-performance
+
+    - name: Checkout base branch  
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.base_ref }}
+
+    - name: Use Node.js 20.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20.x
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run baseline performance (base branch)
+      run: npm run benchmark -- --suite=all --iterations=50
+      env:
+        NODE_ENV: test
+        PERFORMANCE_MODE: baseline
+
+    - name: Compare performance
+      run: |
+        echo "# Performance Comparison" > perf-comparison.md
+        echo "" >> perf-comparison.md
+        
+        # Compare key metrics
+        if [ -f pr-performance/benchmark-results/auth-performance.json ] && [ -f benchmark-results/auth-performance.json ]; then
+          PR_OAUTH=$(jq -r '.oauth_flow_time_ms' pr-performance/benchmark-results/auth-performance.json)
+          BASE_OAUTH=$(jq -r '.oauth_flow_time_ms' benchmark-results/auth-performance.json)
+          
+          OAUTH_DIFF=$(echo "$PR_OAUTH - $BASE_OAUTH" | bc -l)
+          OAUTH_PERCENT=$(echo "scale=1; ($OAUTH_DIFF / $BASE_OAUTH) * 100" | bc -l)
+          
+          echo "## OAuth Flow Performance" >> perf-comparison.md
+          echo "- Base branch: ${BASE_OAUTH}ms" >> perf-comparison.md
+          echo "- PR branch: ${PR_OAUTH}ms" >> perf-comparison.md  
+          echo "- Difference: ${OAUTH_DIFF:+"+"}${OAUTH_DIFF}ms (${OAUTH_PERCENT:+"+"}${OAUTH_PERCENT}%)" >> perf-comparison.md
+          
+          if (( $(echo "$OAUTH_PERCENT > 20" | bc -l) )); then
+            echo "⚠️ **Warning:** OAuth flow performance degraded by >20%" >> perf-comparison.md
+          fi
+        fi
+
+    - name: Comment performance comparison
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const comparison = fs.readFileSync('perf-comparison.md', 'utf8');
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: `## 🚀 Performance Analysis\n\n${comparison}`
+          });

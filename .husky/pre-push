@@ -1,0 +1,32 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "🚀 Running pre-push hooks..."
+
+# Get the current branch
+current_branch=$(git rev-parse --abbrev-ref HEAD)
+
+# Skip checks for main/master branch pushes (usually handled by CI)
+if [ "$current_branch" = "main" ] || [ "$current_branch" = "master" ]; then
+  echo "⏭️  Skipping pre-push hooks for main/master branch"
+  exit 0
+fi
+
+# Run full validation
+echo "🔍 Running full validation suite..."
+npm run validate
+
+# Check for TODO/FIXME comments in staged files (warning only)
+echo "📋 Checking for TODO/FIXME comments..."
+todos=$(git diff --name-only origin/main..HEAD -- '*.ts' '*.tsx' | xargs grep -l "TODO\|FIXME" 2>/dev/null || true)
+if [ ! -z "$todos" ]; then
+  echo "⚠️  Warning: Found TODO/FIXME comments in:"
+  echo "$todos"
+  echo "Consider addressing these before pushing to main branch."
+fi
+
+# Check bundle size (if significant changes)
+echo "📦 Checking bundle size..."
+npm run analyze:bundle > /dev/null 2>&1 || echo "⚠️  Could not analyze bundle size"
+
+echo "✅ Pre-push hooks completed successfully!"

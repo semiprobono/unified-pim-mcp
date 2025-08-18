@@ -1,0 +1,321 @@
+name: Coverage Analysis
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  schedule:
+    # Run coverage analysis daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    
+    services:
+      chromadb:
+        image: chromadb/chroma:latest
+        ports:
+          - 8000:8000
+        env:
+          CHROMA_SERVER_HOST: 0.0.0.0
+          CHROMA_SERVER_HTTP_PORT: 8000
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Use Node.js 20.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20.x
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run comprehensive test coverage
+      run: npm run test:coverage
+      env:
+        NODE_ENV: test
+        LOG_LEVEL: error
+        CHROMADB_HOST: localhost
+        CHROMADB_PORT: 8000
+        CI: true
+
+    - name: Generate coverage badge
+      uses: jaywcjlove/coverage-badges-cli@v1.1.0
+      with:
+        source: coverage/coverage-summary.json
+        output: coverage/badges.svg
+        
+    - name: Analyze coverage trends
+      run: |
+        echo "# Coverage Analysis Report" >> coverage-report.md
+        echo "Generated on: $(date)" >> coverage-report.md
+        echo "" >> coverage-report.md
+        
+        # Extract coverage percentages
+        LINES=$(cat coverage/coverage-summary.json | jq -r '.total.lines.pct')
+        STATEMENTS=$(cat coverage/coverage-summary.json | jq -r '.total.statements.pct')
+        FUNCTIONS=$(cat coverage/coverage-summary.json | jq -r '.total.functions.pct')
+        BRANCHES=$(cat coverage/coverage-summary.json | jq -r '.total.branches.pct')
+        
+        echo "## Overall Coverage" >> coverage-report.md
+        echo "- Lines: ${LINES}%" >> coverage-report.md
+        echo "- Statements: ${STATEMENTS}%" >> coverage-report.md
+        echo "- Functions: ${FUNCTIONS}%" >> coverage-report.md
+        echo "- Branches: ${BRANCHES}%" >> coverage-report.md
+        echo "" >> coverage-report.md
+        
+        # Coverage thresholds check
+        echo "## Threshold Analysis" >> coverage-report.md
+        
+        check_threshold() {
+          local metric=$1
+          local value=$2
+          local threshold=$3
+          
+          if (( $(echo "$value >= $threshold" | bc -l) )); then
+            echo "✅ $metric: $value% (≥ $threshold%)" >> coverage-report.md
+          else
+            echo "❌ $metric: $value% (< $threshold%)" >> coverage-report.md
+          fi
+        }
+        
+        check_threshold "Lines" $LINES 80
+        check_threshold "Statements" $STATEMENTS 80
+        check_threshold "Functions" $FUNCTIONS 80
+        check_threshold "Branches" $BRANCHES 80
+        
+        # Microsoft Graph adapter critical path analysis
+        echo "" >> coverage-report.md
+        echo "## Critical Path Coverage" >> coverage-report.md
+        
+        # Extract coverage for critical Microsoft Graph components
+        if [ -f coverage/coverage-summary.json ]; then
+          echo "### Authentication Components" >> coverage-report.md
+          jq -r 'to_entries[] | select(.key | contains("auth/")) | "- \(.key): Lines \(.value.lines.pct)%, Functions \(.value.functions.pct)%"' coverage/coverage-summary.json >> coverage-report.md
+          
+          echo "" >> coverage-report.md
+          echo "### Client Components" >> coverage-report.md
+          jq -r 'to_entries[] | select(.key | contains("clients/")) | "- \(.key): Lines \(.value.lines.pct)%, Functions \(.value.functions.pct)%"' coverage/coverage-summary.json >> coverage-report.md
+          
+          echo "" >> coverage-report.md
+          echo "### Cache Components" >> coverage-report.md
+          jq -r 'to_entries[] | select(.key | contains("cache/")) | "- \(.key): Lines \(.value.lines.pct)%, Functions \(.value.functions.pct)%"' coverage/coverage-summary.json >> coverage-report.md
+        fi
+
+    - name: Identify untested code
+      run: |
+        echo "" >> coverage-report.md
+        echo "## Files Below Threshold" >> coverage-report.md
+        
+        # Find files with coverage below 80%
+        jq -r 'to_entries[] | select(.value.lines.pct < 80) | "- \(.key): \(.value.lines.pct)% line coverage"' coverage/coverage-summary.json >> coverage-report.md
+        
+        echo "" >> coverage-report.md
+        echo "## Uncovered Lines Analysis" >> coverage-report.md
+        
+        # Extract uncovered lines from lcov report
+        if [ -f coverage/lcov.info ]; then
+          grep -E '^SF:|^DA:' coverage/lcov.info | while IFS= read -r line; do
+            if [[ $line == SF:* ]]; then
+              current_file=$(echo "$line" | sed 's/SF://')
+              echo "### $(basename "$current_file")" >> coverage-report.md
+            elif [[ $line == DA:*,0 ]]; then
+              line_num=$(echo "$line" | cut -d':' -f2 | cut -d',' -f1)
+              echo "- Line $line_num: Not covered" >> coverage-report.md
+            fi
+          done
+        fi
+
+    - name: Generate detailed HTML report
+      run: |
+        # Create an enhanced HTML report
+        cp -r coverage/lcov-report coverage/enhanced-report
+        
+        # Add custom CSS for better presentation
+        cat << 'EOF' > coverage/enhanced-report/custom.css
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .coverage.high { background-color: #d4edda; }
+        .coverage.medium { background-color: #fff3cd; }
+        .coverage.low { background-color: #f8d7da; }
+        .metric-card { 
+          border: 1px solid #ddd; 
+          border-radius: 8px; 
+          padding: 16px; 
+          margin: 8px; 
+          display: inline-block; 
+        }
+        EOF
+
+    - name: Upload coverage artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage-reports
+        path: |
+          coverage/
+          coverage-report.md
+        retention-days: 30
+
+    - name: Comment on PR with coverage
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const coverageReport = fs.readFileSync('coverage-report.md', 'utf8');
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: `## 📊 Test Coverage Report\n\n${coverageReport}`
+          });
+
+    - name: Upload to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        directory: ./coverage
+        files: ./coverage/lcov.info,./coverage/clover.xml,./coverage/coverage-final.json
+        flags: comprehensive
+        name: comprehensive-coverage
+        fail_ci_if_error: false
+        verbose: true
+
+    - name: SonarCloud Scan
+      if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+      uses: SonarSource/sonarcloud-github-action@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+    - name: Quality Gate Check
+      run: |
+        LINES=$(cat coverage/coverage-summary.json | jq -r '.total.lines.pct')
+        STATEMENTS=$(cat coverage/coverage-summary.json | jq -r '.total.statements.pct')
+        FUNCTIONS=$(cat coverage/coverage-summary.json | jq -r '.total.functions.pct')
+        BRANCHES=$(cat coverage/coverage-summary.json | jq -r '.total.branches.pct')
+        
+        echo "Quality Gate Analysis:"
+        echo "======================"
+        
+        THRESHOLD=80
+        FAILED=false
+        
+        check_metric() {
+          local name=$1
+          local value=$2
+          
+          if (( $(echo "$value >= $THRESHOLD" | bc -l) )); then
+            echo "✅ $name: $value% (PASS)"
+          else
+            echo "❌ $name: $value% (FAIL - below $THRESHOLD%)"
+            FAILED=true
+          fi
+        }
+        
+        check_metric "Lines" $LINES
+        check_metric "Statements" $STATEMENTS  
+        check_metric "Functions" $FUNCTIONS
+        check_metric "Branches" $BRANCHES
+        
+        if [ "$FAILED" = true ]; then
+          echo ""
+          echo "❌ Quality gate failed! Coverage below threshold."
+          exit 1
+        else
+          echo ""
+          echo "✅ Quality gate passed! All metrics above threshold."
+        fi
+
+  coverage-diff:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    services:
+      chromadb:
+        image: chromadb/chroma:latest
+        ports:
+          - 8000:8000
+
+    steps:
+    - name: Checkout PR branch
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.head_ref }}
+
+    - name: Use Node.js 20.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20.x
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run coverage on PR branch
+      run: npm run test:coverage
+      env:
+        NODE_ENV: test
+        CHROMADB_HOST: localhost
+        CHROMADB_PORT: 8000
+
+    - name: Save PR coverage
+      run: cp coverage/coverage-summary.json pr-coverage.json
+
+    - name: Checkout base branch
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.base_ref }}
+        clean: false
+
+    - name: Install dependencies (base)
+      run: npm ci
+
+    - name: Run coverage on base branch
+      run: npm run test:coverage
+      env:
+        NODE_ENV: test
+        CHROMADB_HOST: localhost
+        CHROMADB_PORT: 8000
+
+    - name: Compare coverage
+      run: |
+        echo "# Coverage Comparison" > coverage-diff.md
+        echo "" >> coverage-diff.md
+        
+        PR_LINES=$(jq -r '.total.lines.pct' pr-coverage.json)
+        BASE_LINES=$(jq -r '.total.lines.pct' coverage/coverage-summary.json)
+        
+        PR_FUNCS=$(jq -r '.total.functions.pct' pr-coverage.json)  
+        BASE_FUNCS=$(jq -r '.total.functions.pct' coverage/coverage-summary.json)
+        
+        LINES_DIFF=$(echo "$PR_LINES - $BASE_LINES" | bc -l)
+        FUNCS_DIFF=$(echo "$PR_FUNCS - $BASE_FUNCS" | bc -l)
+        
+        echo "| Metric | Base Branch | PR Branch | Difference |" >> coverage-diff.md
+        echo "|--------|-------------|-----------|------------|" >> coverage-diff.md
+        echo "| Lines | ${BASE_LINES}% | ${PR_LINES}% | ${LINES_DIFF:+"+"}${LINES_DIFF}% |" >> coverage-diff.md
+        echo "| Functions | ${BASE_FUNCS}% | ${PR_FUNCS}% | ${FUNCS_DIFF:+"+"}${FUNCS_DIFF}% |" >> coverage-diff.md
+        
+        if (( $(echo "$LINES_DIFF < -1" | bc -l) )); then
+          echo "" >> coverage-diff.md
+          echo "⚠️ **Warning:** Line coverage decreased by more than 1%" >> coverage-diff.md
+        fi
+
+    - name: Comment coverage diff
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const diff = fs.readFileSync('coverage-diff.md', 'utf8');
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: diff
+          });

@@ -1,0 +1,45 @@
+# Prometheus configuration for Unified PIM MCP monitoring
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Node Exporter for system metrics
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+
+  # MCP Server metrics (if implemented)
+  - job_name: 'mcp-server'
+    static_configs:
+      - targets: ['host.docker.internal:9091']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # ChromaDB metrics (if available)
+  - job_name: 'chromadb'
+    static_configs:
+      - targets: ['chromadb-turbo:8000']
+    metrics_path: '/api/v1/metrics'
+    scrape_interval: 30s
+
+  # Redis metrics via redis_exporter (optional)
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-turbo:6379']
+    scrape_interval: 30s
+
+  # PostgreSQL metrics via postgres_exporter (optional)
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres-turbo:5432']
+    scrape_interval: 30s

@@ -1,0 +1,34 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "📝 Validating commit message..."
+
+# Basic commit message validation
+commit_msg_file=$1
+commit_msg=$(cat "$commit_msg_file")
+
+# Check if commit message is not empty
+if [ -z "$commit_msg" ]; then
+  echo "❌ Commit message cannot be empty!"
+  exit 1
+fi
+
+# Check minimum length
+if [ ${#commit_msg} -lt 10 ]; then
+  echo "❌ Commit message must be at least 10 characters long!"
+  echo "Current message: '$commit_msg'"
+  exit 1
+fi
+
+# Check for conventional commit format (optional - can be enabled)
+# if ! echo "$commit_msg" | grep -qE "^(feat|fix|docs|style|refactor|perf|test|chore|build|ci)(\(.+\))?\!?: .+"; then
+#   echo "❌ Commit message must follow conventional commit format!"
+#   echo "Examples:"
+#   echo "  feat: add new email adapter"
+#   echo "  fix: resolve calendar sync issue"
+#   echo "  docs: update API documentation"
+#   echo "Current message: '$commit_msg'"
+#   exit 1
+# fi
+
+echo "✅ Commit message is valid!"

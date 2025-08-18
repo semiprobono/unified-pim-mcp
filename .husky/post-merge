@@ -1,0 +1,27 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "🔄 Running post-merge hooks..."
+
+# Check if package.json or package-lock.json changed
+if git diff HEAD@{1} --name-only | grep -q "package.*\.json"; then
+  echo "📦 Package files changed, running npm install..."
+  npm install
+fi
+
+# Check if config files changed
+if git diff HEAD@{1} --name-only | grep -q "config/"; then
+  echo "⚙️  Config files changed, you may need to restart the development server"
+fi
+
+# Check if docker-compose files changed
+if git diff HEAD@{1} --name-only | grep -q "docker-compose"; then
+  echo "🐳 Docker Compose files changed, consider running: npm run docker:up"
+fi
+
+# Check if database schema changed
+if git diff HEAD@{1} --name-only | grep -q "migrations\|schema"; then
+  echo "🗃️  Database files changed, consider running migrations"
+fi
+
+echo "✅ Post-merge hooks completed!"

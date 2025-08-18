@@ -1,0 +1,536 @@
+name: Integration Tests
+
+on:
+  push:
+    branches: [ main, develop, feature/* ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run nightly at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      test_suite:
+        description: 'Test suite to run'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - unit
+          - integration
+          - e2e
+          - performance
+      enable_real_integration:
+        description: 'Enable real external service integration'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  NODE_VERSION: '18'
+  INTEGRATION_TIMEOUT: '300000'
+  PERFORMANCE_TIMEOUT: '600000'
+
+jobs:
+  # Pre-integration checks
+  pre_integration:
+    name: Pre-Integration Checks
+    runs-on: ubuntu-latest
+    outputs:
+      should_run_integration: ${{ steps.check.outputs.should_run }}
+      test_matrix: ${{ steps.matrix.outputs.matrix }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run type-check
+
+      - name: Lint code
+        run: npm run lint
+
+      - name: Check for integration test changes
+        id: check
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "should_run=true" >> $GITHUB_OUTPUT
+          elif git diff --name-only ${{ github.event.before }}..${{ github.sha }} | grep -E "(tests/integration|src/infrastructure|src/shared)" > /dev/null; then
+            echo "should_run=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_run=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate test matrix
+        id: matrix
+        run: |
+          if [ "${{ inputs.test_suite }}" = "all" ] || [ "${{ inputs.test_suite }}" = "" ]; then
+            echo 'matrix={"include":[{"suite":"unit","timeout":"120000"},{"suite":"integration","timeout":"300000"},{"suite":"e2e","timeout":"600000"},{"suite":"performance","timeout":"900000"}]}' >> $GITHUB_OUTPUT
+          else
+            timeout="120000"
+            if [ "${{ inputs.test_suite }}" = "integration" ]; then timeout="300000"; fi
+            if [ "${{ inputs.test_suite }}" = "e2e" ]; then timeout="600000"; fi
+            if [ "${{ inputs.test_suite }}" = "performance" ]; then timeout="900000"; fi
+            echo "matrix={\"include\":[{\"suite\":\"${{ inputs.test_suite }}\",\"timeout\":\"$timeout\"}]}" >> $GITHUB_OUTPUT
+          fi
+
+  # Infrastructure setup
+  setup_infrastructure:
+    name: Setup Test Infrastructure
+    runs-on: ubuntu-latest
+    needs: pre_integration
+    if: needs.pre_integration.outputs.should_run_integration == 'true'
+    
+    services:
+      chromadb:
+        image: chromadb/chroma:latest
+        ports:
+          - 8000:8000
+        options: >-
+          --health-cmd "curl -f http://localhost:8000/api/v1/heartbeat || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Wait for services
+        run: |
+          echo "Waiting for ChromaDB..."
+          timeout 60 bash -c 'until curl -f http://localhost:8000/api/v1/heartbeat; do sleep 2; done'
+          echo "Waiting for Redis..."
+          timeout 60 bash -c 'until redis-cli -h localhost ping; do sleep 2; done'
+
+      - name: Verify service health
+        run: |
+          curl -f http://localhost:8000/api/v1/heartbeat
+          redis-cli -h localhost ping
+
+      - name: Create test environment file
+        run: |
+          cat > .env.test << EOF
+          # Test Environment Configuration
+          NODE_ENV=test
+          LOG_LEVEL=warn
+          
+          # Test Service Configuration
+          CHROMADB_HOST=localhost
+          CHROMADB_PORT=8000
+          REDIS_HOST=localhost
+          REDIS_PORT=6379
+          
+          # Mock Service Configuration
+          MOCK_OAUTH_PORT=3001
+          MOCK_GRAPH_PORT=3002
+          
+          # Test Credentials (Mock)
+          AZURE_CLIENT_ID=test-client-id
+          AZURE_TENANT_ID=test-tenant-id
+          AZURE_CLIENT_SECRET=test-client-secret
+          AZURE_REDIRECT_URI=http://localhost:3000/auth/callback
+          
+          # Security Configuration
+          ENCRYPTION_KEY=test-encryption-key-32-characters
+          JWT_SECRET=test-jwt-secret-key
+          
+          # Test Configuration
+          REAL_INTEGRATION=${{ inputs.enable_real_integration }}
+          PERFORMANCE_TEST_DURATION=30000
+          PERFORMANCE_TEST_CONCURRENT_USERS=5
+          EOF
+
+      - name: Cache test environment
+        uses: actions/cache@v3
+        with:
+          path: |
+            .env.test
+            node_modules/.cache
+          key: test-env-${{ runner.os }}-${{ hashFiles('**/*.json') }}
+
+  # Test execution matrix
+  run_tests:
+    name: Run ${{ matrix.suite }} Tests
+    runs-on: ubuntu-latest
+    needs: [pre_integration, setup_infrastructure]
+    if: needs.pre_integration.outputs.should_run_integration == 'true'
+    
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.pre_integration.outputs.test_matrix) }}
+
+    services:
+      chromadb:
+        image: chromadb/chroma:latest
+        ports:
+          - 8000:8000
+        options: >-
+          --health-cmd "curl -f http://localhost:8000/api/v1/heartbeat || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Restore test environment cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            .env.test
+            node_modules/.cache
+          key: test-env-${{ runner.os }}-${{ hashFiles('**/*.json') }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup test environment
+        run: |
+          if [ ! -f .env.test ]; then
+            cat > .env.test << EOF
+            NODE_ENV=test
+            LOG_LEVEL=warn
+            CHROMADB_HOST=localhost
+            CHROMADB_PORT=8000
+            REDIS_HOST=localhost
+            REDIS_PORT=6379
+            AZURE_CLIENT_ID=test-client-id
+            AZURE_TENANT_ID=test-tenant-id
+            AZURE_CLIENT_SECRET=test-client-secret
+            AZURE_REDIRECT_URI=http://localhost:3000/auth/callback
+            ENCRYPTION_KEY=test-encryption-key-32-characters
+            JWT_SECRET=test-jwt-secret-key
+            REAL_INTEGRATION=${{ inputs.enable_real_integration }}
+          EOF
+          fi
+
+      - name: Wait for services
+        run: |
+          echo "Waiting for ChromaDB..."
+          timeout 60 bash -c 'until curl -f http://localhost:8000/api/v1/heartbeat; do sleep 2; done'
+          echo "Waiting for Redis..."
+          timeout 60 bash -c 'until redis-cli -h localhost ping; do sleep 2; done'
+
+      - name: Run unit tests
+        if: matrix.suite == 'unit'
+        run: |
+          npm run test:unit -- --coverage --testTimeout=${{ matrix.timeout }}
+        timeout-minutes: 10
+
+      - name: Run integration tests
+        if: matrix.suite == 'integration'
+        run: |
+          npm run test:integration -- --coverage --testTimeout=${{ matrix.timeout }}
+        timeout-minutes: 20
+        env:
+          JEST_TIMEOUT: ${{ matrix.timeout }}
+
+      - name: Run E2E tests
+        if: matrix.suite == 'e2e'
+        run: |
+          npm run test:e2e -- --testTimeout=${{ matrix.timeout }}
+        timeout-minutes: 30
+        env:
+          JEST_TIMEOUT: ${{ matrix.timeout }}
+
+      - name: Run performance tests
+        if: matrix.suite == 'performance'
+        run: |
+          npm run test:integration -- --testNamePattern="Performance" --testTimeout=${{ matrix.timeout }}
+        timeout-minutes: 45
+        env:
+          JEST_TIMEOUT: ${{ matrix.timeout }}
+          PERFORMANCE_TEST_DURATION: 30000
+          PERFORMANCE_TEST_CONCURRENT_USERS: 5
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: test-results-${{ matrix.suite }}-${{ github.run_number }}
+          path: |
+            coverage/
+            test-results.xml
+            *.log
+
+      - name: Upload coverage to Codecov
+        if: matrix.suite == 'integration' || matrix.suite == 'unit'
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage/lcov.info
+          flags: ${{ matrix.suite }}
+          name: ${{ matrix.suite }}-coverage
+          fail_ci_if_error: false
+
+  # Security and vulnerability testing
+  security_tests:
+    name: Security Tests
+    runs-on: ubuntu-latest
+    needs: pre_integration
+    if: needs.pre_integration.outputs.should_run_integration == 'true'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit
+        run: npm audit --audit-level=moderate
+
+      - name: Run security tests
+        run: |
+          # Test encryption/decryption
+          npm run test -- --testNamePattern="Security" --testTimeout=60000
+
+      - name: Check for hardcoded secrets
+        run: |
+          # Simple check for potential secrets
+          if grep -r -E "(password|secret|key|token)" src/ --exclude-dir=node_modules | grep -v "test" | grep -E "=\s*['\"][^'\"]{20,}"; then
+            echo "⚠️ Potential hardcoded secrets found"
+            exit 1
+          fi
+
+  # Performance benchmarking
+  performance_benchmark:
+    name: Performance Benchmark
+    runs-on: ubuntu-latest
+    needs: pre_integration
+    if: needs.pre_integration.outputs.should_run_integration == 'true' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+
+    services:
+      chromadb:
+        image: chromadb/chroma:latest
+        ports:
+          - 8000:8000
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup benchmark environment
+        run: |
+          cat > .env.benchmark << EOF
+          NODE_ENV=benchmark
+          LOG_LEVEL=error
+          CHROMADB_HOST=localhost
+          CHROMADB_PORT=8000
+          REDIS_HOST=localhost
+          REDIS_PORT=6379
+          PERFORMANCE_TEST_DURATION=60000
+          PERFORMANCE_TEST_CONCURRENT_USERS=20
+          EOF
+
+      - name: Wait for services
+        run: |
+          timeout 60 bash -c 'until curl -f http://localhost:8000/api/v1/heartbeat; do sleep 2; done'
+          timeout 60 bash -c 'until redis-cli -h localhost ping; do sleep 2; done'
+
+      - name: Run performance benchmarks
+        run: |
+          npm run test:integration -- --testNamePattern="Performance" --testTimeout=1200000
+        timeout-minutes: 60
+        env:
+          NODE_ENV: benchmark
+
+      - name: Generate performance report
+        run: |
+          echo "# Performance Benchmark Report" > performance-report.md
+          echo "Generated on: $(date)" >> performance-report.md
+          echo "Commit: ${{ github.sha }}" >> performance-report.md
+          echo "" >> performance-report.md
+          
+          if [ -f performance-results.json ]; then
+            echo "## Results" >> performance-report.md
+            cat performance-results.json >> performance-report.md
+          fi
+
+      - name: Upload performance results
+        uses: actions/upload-artifact@v3
+        with:
+          name: performance-benchmark-${{ github.run_number }}
+          path: |
+            performance-report.md
+            performance-results.json
+
+  # Test result aggregation
+  aggregate_results:
+    name: Aggregate Test Results
+    runs-on: ubuntu-latest
+    needs: [run_tests, security_tests]
+    if: always() && needs.pre_integration.outputs.should_run_integration == 'true'
+
+    steps:
+      - name: Download all test artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: test-artifacts
+
+      - name: Aggregate test results
+        run: |
+          echo "# Integration Test Results Summary" > test-summary.md
+          echo "Generated on: $(date)" >> test-summary.md
+          echo "Workflow: ${{ github.workflow }}" >> test-summary.md
+          echo "Run: ${{ github.run_number }}" >> test-summary.md
+          echo "Commit: ${{ github.sha }}" >> test-summary.md
+          echo "" >> test-summary.md
+          
+          # Count test files and extract basic metrics
+          total_tests=0
+          passed_tests=0
+          failed_tests=0
+          
+          for dir in test-artifacts/*/; do
+            if [ -d "$dir" ]; then
+              suite_name=$(basename "$dir" | sed 's/test-results-\([^-]*\).*/\1/')
+              echo "## $suite_name Test Suite" >> test-summary.md
+              
+              if [ -f "$dir/test-results.xml" ]; then
+                # Parse JUnit XML if available
+                suite_tests=$(grep -o 'tests="[0-9]*"' "$dir/test-results.xml" | cut -d'"' -f2 || echo "0")
+                suite_failures=$(grep -o 'failures="[0-9]*"' "$dir/test-results.xml" | cut -d'"' -f2 || echo "0")
+                suite_passed=$((suite_tests - suite_failures))
+                
+                echo "- Tests: $suite_tests" >> test-summary.md
+                echo "- Passed: $suite_passed" >> test-summary.md
+                echo "- Failed: $suite_failures" >> test-summary.md
+                
+                total_tests=$((total_tests + suite_tests))
+                passed_tests=$((passed_tests + suite_passed))
+                failed_tests=$((failed_tests + suite_failures))
+              else
+                echo "- Results: Available in artifacts" >> test-summary.md
+              fi
+              echo "" >> test-summary.md
+            fi
+          done
+          
+          echo "## Overall Summary" >> test-summary.md
+          echo "- Total Tests: $total_tests" >> test-summary.md
+          echo "- Passed: $passed_tests" >> test-summary.md
+          echo "- Failed: $failed_tests" >> test-summary.md
+          echo "- Success Rate: $(( passed_tests * 100 / total_tests ))%" >> test-summary.md
+
+      - name: Upload aggregated results
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-summary-${{ github.run_number }}
+          path: test-summary.md
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const summary = fs.readFileSync('test-summary.md', 'utf8');
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: summary
+            });
+
+  # Cleanup
+  cleanup:
+    name: Cleanup
+    runs-on: ubuntu-latest
+    needs: [aggregate_results, performance_benchmark]
+    if: always()
+
+    steps:
+      - name: Cleanup test artifacts
+        run: |
+          echo "Cleaning up test environment..."
+          # In a real scenario, this might clean up cloud resources
+          echo "Cleanup completed"
+
+      - name: Notify on failure
+        if: failure()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            if (context.eventName === 'schedule') {
+              // Send notification for scheduled runs
+              github.rest.repos.createDispatchEvent({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                event_type: 'integration-test-failure',
+                client_payload: {
+                  workflow: context.workflow,
+                  run_id: context.runId,
+                  sha: context.sha
+                }
+              });
+            }

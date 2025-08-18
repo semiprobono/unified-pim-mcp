@@ -1,0 +1,121 @@
+{
+  "server": {
+    "name": "unified-pim-mcp",
+    "version": "1.0.0",
+    "environment": "development"
+  },
+  "logging": {
+    "level": "info",
+    "format": "json",
+    "enableConsole": true,
+    "enableFile": false,
+    "maxFiles": 5,
+    "maxSize": "10m"
+  },
+  "platforms": {
+    "microsoft": {
+      "enabled": true,
+      "clientId": "${MICROSOFT_CLIENT_ID}",
+      "clientSecret": "${MICROSOFT_CLIENT_SECRET}",
+      "tenantId": "${MICROSOFT_TENANT_ID}",
+      "redirectUri": "http://localhost:3000/auth/callback",
+      "scopes": [
+        "Calendars.ReadWrite",
+        "Mail.Read",
+        "Mail.Send",
+        "User.Read",
+        "Contacts.Read",
+        "Contacts.ReadWrite",
+        "Tasks.ReadWrite"
+      ]
+    },
+    "google": {
+      "enabled": false,
+      "clientId": "${GOOGLE_CLIENT_ID}",
+      "clientSecret": "${GOOGLE_CLIENT_SECRET}",
+      "redirectUri": "http://localhost:3000/auth/google/callback"
+    },
+    "apple": {
+      "enabled": false,
+      "bundleId": "${APPLE_BUNDLE_ID}",
+      "teamId": "${APPLE_TEAM_ID}"
+    }
+  },
+  "cache": {
+    "enabled": true,
+    "type": "chromadb",
+    "ttl": 300000,
+    "maxSize": 1000,
+    "cleanupInterval": 300000,
+    "chromadb": {
+      "url": "http://localhost:8000",
+      "collectionPrefix": "unified_pim",
+      "enableEmbeddings": true,
+      "embeddingModel": "all-MiniLM-L6-v2"
+    },
+    "redis": {
+      "host": "localhost",
+      "port": 6379,
+      "password": null,
+      "db": 0,
+      "maxRetriesPerRequest": 3,
+      "retryDelayOnFailover": 100
+    }
+  },
+  "security": {
+    "encryption": {
+      "algorithm": "aes-256-gcm",
+      "keyDerivation": "pbkdf2",
+      "iterations": 100000,
+      "saltLength": 32,
+      "ivLength": 16
+    },
+    "authentication": {
+      "tokenExpiry": 3600000,
+      "refreshTokenExpiry": 2592000000,
+      "maxLoginAttempts": 5,
+      "lockoutDuration": 900000
+    },
+    "rateLimit": {
+      "windowMs": 900000,
+      "maxRequests": 100,
+      "skipSuccessfulRequests": false
+    }
+  },
+  "resilience": {
+    "circuitBreaker": {
+      "failureThreshold": 5,
+      "successThreshold": 2,
+      "timeout": 60000,
+      "resetTimeout": 300000
+    },
+    "retry": {
+      "maxRetries": 3,
+      "retryDelay": 1000,
+      "exponentialBackoff": true,
+      "maxDelay": 10000
+    },
+    "timeout": {
+      "default": 30000,
+      "longRunning": 300000
+    }
+  },
+  "monitoring": {
+    "healthCheck": {
+      "interval": 30000,
+      "timeout": 5000,
+      "enabled": true
+    },
+    "metrics": {
+      "enabled": true,
+      "port": 3001,
+      "endpoint": "/metrics"
+    }
+  },
+  "development": {
+    "mockServices": false,
+    "logSensitiveData": false,
+    "enableDebugEndpoints": true,
+    "bypassAuthentication": false
+  }
+}

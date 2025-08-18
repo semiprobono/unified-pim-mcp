@@ -1,0 +1,19 @@
+#!/usr/bin/env pwsh
+# Unified PIM MCP - Pre-commit Quality Gate
+# This hook runs comprehensive quality checks before each commit
+
+Write-Host "🔍 Running pre-commit quality checks..." -ForegroundColor Cyan
+
+# Run the comprehensive quality gate
+$qualityResult = & "pwsh" "-File" "scripts/quality-gate.ps1" "-Stage" "pre-commit" "-Fix"
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Host ""
+    Write-Host "❌ Pre-commit checks failed!" -ForegroundColor Red
+    Write-Host "💡 Tip: Run \"npm run validate\" to see all issues" -ForegroundColor Yellow
+    Write-Host "🔧 Many issues can be auto-fixed with \"npm run format && npm run lint:fix\"" -ForegroundColor Yellow
+    exit 1
+}
+
+Write-Host "✅ All pre-commit checks passed!" -ForegroundColor Green
+exit 0
