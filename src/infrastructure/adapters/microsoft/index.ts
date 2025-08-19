@@ -51,11 +51,16 @@ export {
   FreeTimeSlot,
   ContactsService,
   ContactQueryOptions,
-  ContactSearchResult
+  ContactSearchResult,
+  TaskService,
+  TaskQueryOptions,
+  TaskSearchResult,
+  CreateTaskInput,
+  UpdateTaskInput
 } from './services/index.js';
 
 // Mapper exports
-export { EmailMapper, CalendarMapper, ContactsMapper } from './mappers/index.js';
+export { EmailMapper, CalendarMapper, ContactsMapper, TaskMapper } from './mappers/index.js';
 
 // Main adapter export
 export { GraphAdapter } from './GraphAdapter.js';

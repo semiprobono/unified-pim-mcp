@@ -35,6 +35,7 @@ import {
   EmailService,
   CalendarService,
   ContactsService,
+  TaskService,
 } from './index.js';
 
 /**
@@ -59,6 +60,7 @@ export class GraphAdapter implements PlatformPort {
   private emailService?: EmailService;
   private calendarService?: CalendarService;
   private contactsService?: ContactsService;
+  private taskService?: TaskService;
   private userId?: string;
 
   constructor(
@@ -179,6 +181,11 @@ export class GraphAdapter implements PlatformPort {
         this.cacheManager,
         this.chromaDb,
         this.errorHandler,
+        this.logger
+      );
+
+      this.taskService = new TaskService(
+        this.graphClient,
         this.logger
       );
 
@@ -795,60 +802,232 @@ export class GraphAdapter implements PlatformPort {
 
   // Task operations
   async fetchTasks(criteria: SearchCriteria): Promise<PlatformResult<Task[]>> {
-    // Implementation will be added in Phase 5
-    return {
-      success: false,
-      error: 'Not implemented yet',
-    };
+    try {
+      if (!this.isAuthenticated || !this.taskService) {
+        return {
+          success: false,
+          error: 'Not authenticated or task service not initialized',
+        };
+      }
+
+      const result = await this.taskService.listTasks({
+        limit: criteria.limit,
+        skip: criteria.offset,
+        status: criteria.customFilters?.status as any,
+        importance: criteria.customFilters?.importance as any,
+        dateFrom: criteria.dateRange?.start,
+        dateTo: criteria.dateRange?.end,
+      });
+
+      return {
+        success: true,
+        data: result.tasks,
+        pagination: result.pagination,
+      };
+    } catch (error) {
+      this.logger.error('Failed to fetch tasks', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to fetch tasks',
+      };
+    }
   }
 
   async getTask(id: string): Promise<PlatformResult<Task>> {
-    // Implementation will be added in Phase 5
-    return {
-      success: false,
-      error: 'Not implemented yet',
-    };
+    try {
+      if (!this.isAuthenticated || !this.taskService) {
+        return {
+          success: false,
+          error: 'Not authenticated or task service not initialized',
+        };
+      }
+
+      const task = await this.taskService.getTask(id);
+      return {
+        success: true,
+        data: task,
+      };
+    } catch (error) {
+      this.logger.error('Failed to get task', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to get task',
+      };
+    }
   }
 
   async createTask(task: Partial<Task>): Promise<PlatformResult<string>> {
-    // Implementation will be added in Phase 5
-    return {
-      success: false,
-      error: 'Not implemented yet',
-    };
+    try {
+      if (!this.isAuthenticated || !this.taskService) {
+        return {
+          success: false,
+          error: 'Not authenticated or task service not initialized',
+        };
+      }
+
+      const createdTask = await this.taskService.createTask({
+        title: task.title || 'Untitled Task',
+        description: task.description,
+        importance: task.importance,
+        dueDateTime: task.dueDateTime,
+        startDateTime: task.startDateTime,
+        categories: task.categories,
+      });
+
+      return {
+        success: true,
+        data: createdTask.id.toString(),
+      };
+    } catch (error) {
+      this.logger.error('Failed to create task', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to create task',
+      };
+    }
   }
 
   async updateTask(id: string, updates: Partial<Task>): Promise<PlatformResult<Task>> {
-    // Implementation will be added in Phase 5
-    return {
-      success: false,
-      error: 'Not implemented yet',
-    };
+    try {
+      if (!this.isAuthenticated || !this.taskService) {
+        return {
+          success: false,
+          error: 'Not authenticated or task service not initialized',
+        };
+      }
+
+      const updatedTask = await this.taskService.updateTask(id, {
+        title: updates.title,
+        description: updates.description,
+        status: updates.status,
+        importance: updates.importance,
+        dueDateTime: updates.dueDateTime,
+        startDateTime: updates.startDateTime,
+        categories: updates.categories,
+        percentComplete: updates.percentComplete,
+      });
+
+      return {
+        success: true,
+        data: updatedTask,
+      };
+    } catch (error) {
+      this.logger.error('Failed to update task', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to update task',
+      };
+    }
   }
 
   async deleteTask(id: string): Promise<PlatformResult<boolean>> {
-    // Implementation will be added in Phase 5
-    return {
-      success: false,
-      error: 'Not implemented yet',
-    };
+    try {
+      if (!this.isAuthenticated || !this.taskService) {
+        return {
+          success: false,
+          error: 'Not authenticated or task service not initialized',
+        };
+      }
+
+      await this.taskService.deleteTask(id);
+      return {
+        success: true,
+        data: true,
+      };
+    } catch (error) {
+      this.logger.error('Failed to delete task', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to delete task',
+      };
+    }
   }
 
   async searchTasks(query: string, criteria?: SearchCriteria): Promise<PlatformResult<Task[]>> {
-    // Implementation will be added in Phase 5
-    return {
-      success: false,
-      error: 'Not implemented yet',
-    };
+    try {
+      if (!this.isAuthenticated || !this.taskService) {
+        return {
+          success: false,
+          error: 'Not authenticated or task service not initialized',
+        };
+      }
+
+      const tasks = await this.taskService.searchTasks(query, {
+        limit: criteria?.limit,
+        status: criteria?.customFilters?.status as any,
+        importance: criteria?.customFilters?.importance as any,
+      });
+
+      return {
+        success: true,
+        data: tasks,
+      };
+    } catch (error) {
+      this.logger.error('Failed to search tasks', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to search tasks',
+      };
+    }
   }
 
   async batchTaskOperations(operations: BatchOperation<Task>[]): Promise<BatchResult<Task>> {
-    // Implementation will be added in Phase 5
+    const results: Array<{ success: boolean; data?: Task; error?: string }> = [];
+    const failedOperations: Array<{ operation: BatchOperation<Task>; error: string }> = [];
+
+    for (const operation of operations) {
+      try {
+        switch (operation.operation) {
+          case 'create':
+            const createResult = await this.createTask(operation.data);
+            if (createResult.success) {
+              const task = await this.getTask(createResult.data!);
+              results.push({ success: true, data: task.data });
+            } else {
+              results.push({ success: false, error: createResult.error });
+              failedOperations.push({ operation, error: createResult.error || 'Unknown error' });
+            }
+            break;
+          case 'update':
+            const updateResult = await this.updateTask(operation.id!, operation.data);
+            results.push(updateResult);
+            if (!updateResult.success) {
+              failedOperations.push({ operation, error: updateResult.error || 'Unknown error' });
+            }
+            break;
+          case 'delete':
+            const deleteResult = await this.deleteTask(operation.id!);
+            results.push({ success: deleteResult.success, error: deleteResult.error });
+            if (!deleteResult.success) {
+              failedOperations.push({ operation, error: deleteResult.error || 'Unknown error' });
+            }
+            break;
+          default:
+            results.push({ success: false, error: 'Unknown operation type' });
+            failedOperations.push({ operation, error: 'Unknown operation type' });
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        results.push({ success: false, error: errorMessage });
+        failedOperations.push({ operation, error: errorMessage });
+      }
+    }
+
     return {
-      success: false,
-      results: [],
-      failedOperations: [],
+      success: failedOperations.length === 0,
+      results,
+      failedOperations,
     };
+  }
+
+  /**
+   * Get the task service instance
+   */
+  getTaskService(): TaskService {
+    if (!this.taskService) {
+      throw new Error('Task service not initialized');
+    }
+    return this.taskService;
   }
 
   // File operations

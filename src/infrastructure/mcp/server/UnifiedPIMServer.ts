@@ -746,6 +746,210 @@ export class UnifiedPIMServer {
           },
         },
       },
+      // Task tools
+      {
+        name: 'pim_list_tasks',
+        description: 'List tasks from Microsoft To Do with optional filtering',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            listId: { type: 'string', description: 'Optional task list ID' },
+            status: { 
+              type: 'string', 
+              enum: ['notStarted', 'inProgress', 'completed', 'waitingOnOthers', 'deferred'],
+              description: 'Filter by task status'
+            },
+            importance: { 
+              type: 'string', 
+              enum: ['low', 'normal', 'high'],
+              description: 'Filter by importance level'
+            },
+            isCompleted: { type: 'boolean', description: 'Filter by completion status' },
+            dateFrom: { type: 'string', format: 'date-time', description: 'Filter tasks due after this date' },
+            dateTo: { type: 'string', format: 'date-time', description: 'Filter tasks due before this date' },
+            limit: { type: 'number', default: 50, minimum: 1, maximum: 100 },
+            skip: { type: 'number', default: 0, minimum: 0 },
+            orderBy: { 
+              type: 'string',
+              enum: ['dueDateTime', 'importance', 'createdDateTime', 'title'],
+              default: 'dueDateTime'
+            },
+            orderDirection: { type: 'string', enum: ['asc', 'desc'], default: 'asc' },
+            platform: {
+              type: 'string',
+              enum: ['microsoft', 'google', 'apple'],
+              default: 'microsoft',
+            },
+          },
+        },
+      },
+      {
+        name: 'pim_get_task',
+        description: 'Get a specific task by ID',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            taskId: { type: 'string', description: 'Task ID' },
+            listId: { type: 'string', description: 'Optional task list ID' },
+            platform: {
+              type: 'string',
+              enum: ['microsoft', 'google', 'apple'],
+              default: 'microsoft',
+            },
+          },
+          required: ['taskId'],
+        },
+      },
+      {
+        name: 'pim_create_task',
+        description: 'Create a new task in Microsoft To Do',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            title: { type: 'string', description: 'Task title' },
+            description: { type: 'string', description: 'Task description or notes' },
+            listId: { type: 'string', description: 'Optional task list ID (uses default if not provided)' },
+            importance: { 
+              type: 'string', 
+              enum: ['low', 'normal', 'high'],
+              default: 'normal',
+              description: 'Task importance level'
+            },
+            dueDateTime: { type: 'string', format: 'date-time', description: 'Due date and time' },
+            startDateTime: { type: 'string', format: 'date-time', description: 'Start date and time' },
+            reminderDateTime: { type: 'string', format: 'date-time', description: 'Reminder date and time' },
+            categories: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Task categories',
+            },
+            platform: {
+              type: 'string',
+              enum: ['microsoft', 'google', 'apple'],
+              default: 'microsoft',
+            },
+          },
+          required: ['title'],
+        },
+      },
+      {
+        name: 'pim_update_task',
+        description: 'Update an existing task',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            taskId: { type: 'string', description: 'Task ID' },
+            listId: { type: 'string', description: 'Optional task list ID' },
+            title: { type: 'string', description: 'Updated task title' },
+            description: { type: 'string', description: 'Updated task description' },
+            status: { 
+              type: 'string', 
+              enum: ['notStarted', 'inProgress', 'completed', 'waitingOnOthers', 'deferred'],
+              description: 'Updated task status'
+            },
+            importance: { 
+              type: 'string', 
+              enum: ['low', 'normal', 'high'],
+              description: 'Updated importance level'
+            },
+            dueDateTime: { type: 'string', format: 'date-time', description: 'Updated due date (or null to remove)' },
+            startDateTime: { type: 'string', format: 'date-time', description: 'Updated start date (or null to remove)' },
+            categories: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Updated categories',
+            },
+            percentComplete: { 
+              type: 'number', 
+              minimum: 0, 
+              maximum: 100,
+              description: 'Task completion percentage'
+            },
+            platform: {
+              type: 'string',
+              enum: ['microsoft', 'google', 'apple'],
+              default: 'microsoft',
+            },
+          },
+          required: ['taskId'],
+        },
+      },
+      {
+        name: 'pim_delete_task',
+        description: 'Delete a task',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            taskId: { type: 'string', description: 'Task ID to delete' },
+            listId: { type: 'string', description: 'Optional task list ID' },
+            platform: {
+              type: 'string',
+              enum: ['microsoft', 'google', 'apple'],
+              default: 'microsoft',
+            },
+          },
+          required: ['taskId'],
+        },
+      },
+      {
+        name: 'pim_complete_task',
+        description: 'Mark a task as completed',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            taskId: { type: 'string', description: 'Task ID to complete' },
+            listId: { type: 'string', description: 'Optional task list ID' },
+            platform: {
+              type: 'string',
+              enum: ['microsoft', 'google', 'apple'],
+              default: 'microsoft',
+            },
+          },
+          required: ['taskId'],
+        },
+      },
+      {
+        name: 'pim_search_tasks',
+        description: 'Search tasks using semantic search',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            query: { type: 'string', description: 'Search query for semantic search' },
+            listId: { type: 'string', description: 'Optional task list ID to search within' },
+            status: { 
+              type: 'string', 
+              enum: ['notStarted', 'inProgress', 'completed', 'waitingOnOthers', 'deferred'],
+              description: 'Filter by task status'
+            },
+            importance: { 
+              type: 'string', 
+              enum: ['low', 'normal', 'high'],
+              description: 'Filter by importance'
+            },
+            limit: { type: 'number', default: 25, minimum: 1, maximum: 100 },
+            platform: {
+              type: 'string',
+              enum: ['microsoft', 'google', 'apple'],
+              default: 'microsoft',
+            },
+          },
+          required: ['query'],
+        },
+      },
+      {
+        name: 'pim_list_task_lists',
+        description: 'Get available task lists',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            platform: {
+              type: 'string',
+              enum: ['microsoft', 'google', 'apple'],
+              default: 'microsoft',
+            },
+          },
+        },
+      },
     ];
   }
 
@@ -816,6 +1020,24 @@ export class UnifiedPIMServer {
           return await this.findContactsByEmail(args);
         case 'pim_contacts_get_organizations':
           return await this.getOrganizations(args);
+
+        // Task tools
+        case 'pim_list_tasks':
+          return await this.listTasks(args);
+        case 'pim_get_task':
+          return await this.getTask(args);
+        case 'pim_create_task':
+          return await this.createTask(args);
+        case 'pim_update_task':
+          return await this.updateTask(args);
+        case 'pim_delete_task':
+          return await this.deleteTask(args);
+        case 'pim_complete_task':
+          return await this.completeTask(args);
+        case 'pim_search_tasks':
+          return await this.searchTasks(args);
+        case 'pim_list_task_lists':
+          return await this.listTaskLists(args);
 
         default:
           throw new Error(`Unknown tool: ${name}`);
@@ -2365,6 +2587,507 @@ Department: ${contact.organization?.department || 'N/A'}
           {
             type: 'text',
             text: `Error getting organizations: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          },
+        ],
+      };
+    }
+  }
+
+  // Task Management Methods
+
+  /**
+   * List tasks with filtering
+   */
+  private async listTasks(args: any): Promise<any> {
+    const { 
+      platform = 'microsoft',
+      listId,
+      status,
+      importance,
+      isCompleted,
+      dateFrom,
+      dateTo,
+      limit = 50,
+      skip = 0,
+      orderBy = 'dueDateTime',
+      orderDirection = 'asc'
+    } = args;
+
+    try {
+      const adapter = this.platformManager.getAdapter(platform as Platform) as GraphAdapter;
+      if (!adapter || !adapter.isAuthenticated) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Not authenticated with ${platform}`,
+            },
+          ],
+        };
+      }
+
+      const taskService = adapter.getTaskService();
+      const result = await taskService.listTasks({
+        listId,
+        status,
+        importance,
+        isCompleted,
+        dateFrom: dateFrom ? new Date(dateFrom) : undefined,
+        dateTo: dateTo ? new Date(dateTo) : undefined,
+        limit,
+        skip,
+        orderBy,
+        orderDirection
+      });
+
+      const taskSummaries = result.tasks.map(task => {
+        const dueInfo = task.dueDateTime ? ` (Due: ${task.dueDateTime.toLocaleDateString()})` : '';
+        const statusIcon = task.status === 'completed' ? '✅' : 
+                          task.status === 'inProgress' ? '🔄' : '⏳';
+        const importanceIcon = task.importance === 'high' ? '🔴' :
+                               task.importance === 'low' ? '🔵' : '';
+        
+        return `${statusIcon} ${importanceIcon} ${task.title}${dueInfo}`;
+      });
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `📋 Tasks (${result.totalCount} total, showing ${result.tasks.length}):\n\n${taskSummaries.join('\n')}\n\nPage ${result.pagination.page}/${Math.ceil(result.totalCount / (result.pagination.pageSize || 50))}`,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Error listing tasks: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          },
+        ],
+      };
+    }
+  }
+
+  /**
+   * Get a specific task
+   */
+  private async getTask(args: any): Promise<any> {
+    const { taskId, listId, platform = 'microsoft' } = args;
+
+    try {
+      const adapter = this.platformManager.getAdapter(platform as Platform) as GraphAdapter;
+      if (!adapter || !adapter.isAuthenticated) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Not authenticated with ${platform}`,
+            },
+          ],
+        };
+      }
+
+      const taskService = adapter.getTaskService();
+      const task = await taskService.getTask(taskId, listId);
+
+      const statusIcon = task.status === 'completed' ? '✅' : 
+                        task.status === 'inProgress' ? '🔄' : '⏳';
+      const importanceIcon = task.importance === 'high' ? '🔴' :
+                             task.importance === 'low' ? '🔵' : '🟡';
+
+      let details = `${statusIcon} Task Details:\n`;
+      details += `📝 Title: ${task.title}\n`;
+      details += `${importanceIcon} Importance: ${task.importance}\n`;
+      details += `📊 Status: ${task.status} (${task.percentComplete}% complete)\n`;
+      
+      if (task.description) {
+        details += `\n📄 Description:\n${task.description}\n`;
+      }
+      
+      if (task.dueDateTime) {
+        details += `\n📅 Due: ${task.dueDateTime.toLocaleString()}`;
+        const isOverdue = task.status !== 'completed' && new Date() > task.dueDateTime;
+        if (isOverdue) {
+          details += ' ⚠️ OVERDUE';
+        }
+      }
+      
+      if (task.startDateTime) {
+        details += `\n🏁 Start: ${task.startDateTime.toLocaleString()}`;
+      }
+      
+      if (task.completedDateTime) {
+        details += `\n✔️ Completed: ${task.completedDateTime.toLocaleString()}`;
+      }
+      
+      if (task.categories.length > 0) {
+        details += `\n🏷️ Categories: ${task.categories.join(', ')}`;
+      }
+      
+      if (task.subtasks.length > 0) {
+        const completedSubtasks = task.subtasks.filter(s => s.isCompleted);
+        details += `\n\n📋 Subtasks (${completedSubtasks.length}/${task.subtasks.length} completed):`;
+        task.subtasks.forEach(subtask => {
+          const icon = subtask.isCompleted ? '✅' : '⬜';
+          details += `\n  ${icon} ${subtask.title}`;
+        });
+      }
+      
+      if (task.reminders.length > 0) {
+        details += `\n\n⏰ Reminders:`;
+        task.reminders.forEach(reminder => {
+          details += `\n  • ${reminder.reminderDateTime.toLocaleString()} (${reminder.method})`;
+        });
+      }
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: details,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Error getting task: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          },
+        ],
+      };
+    }
+  }
+
+  /**
+   * Create a new task
+   */
+  private async createTask(args: any): Promise<any> {
+    const { 
+      title,
+      description,
+      listId,
+      importance = 'normal',
+      dueDateTime,
+      startDateTime,
+      reminderDateTime,
+      categories = [],
+      platform = 'microsoft'
+    } = args;
+
+    try {
+      const adapter = this.platformManager.getAdapter(platform as Platform) as GraphAdapter;
+      if (!adapter || !adapter.isAuthenticated) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Not authenticated with ${platform}`,
+            },
+          ],
+        };
+      }
+
+      const taskService = adapter.getTaskService();
+      const task = await taskService.createTask({
+        title,
+        description,
+        listId,
+        importance,
+        dueDateTime: dueDateTime ? new Date(dueDateTime) : undefined,
+        startDateTime: startDateTime ? new Date(startDateTime) : undefined,
+        reminderDateTime: reminderDateTime ? new Date(reminderDateTime) : undefined,
+        categories
+      });
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `✅ Task created successfully!\n\n📝 Title: ${task.title}\n🆔 ID: ${task.id}\n📊 Status: ${task.status}\n${task.dueDateTime ? `📅 Due: ${task.dueDateTime.toLocaleString()}` : ''}`,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Error creating task: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          },
+        ],
+      };
+    }
+  }
+
+  /**
+   * Update an existing task
+   */
+  private async updateTask(args: any): Promise<any> {
+    const { 
+      taskId,
+      listId,
+      title,
+      description,
+      status,
+      importance,
+      dueDateTime,
+      startDateTime,
+      categories,
+      percentComplete,
+      platform = 'microsoft'
+    } = args;
+
+    try {
+      const adapter = this.platformManager.getAdapter(platform as Platform) as GraphAdapter;
+      if (!adapter || !adapter.isAuthenticated) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Not authenticated with ${platform}`,
+            },
+          ],
+        };
+      }
+
+      const taskService = adapter.getTaskService();
+      const updates: any = {};
+      
+      if (title !== undefined) updates.title = title;
+      if (description !== undefined) updates.description = description;
+      if (status !== undefined) updates.status = status;
+      if (importance !== undefined) updates.importance = importance;
+      if (dueDateTime !== undefined) updates.dueDateTime = dueDateTime ? new Date(dueDateTime) : null;
+      if (startDateTime !== undefined) updates.startDateTime = startDateTime ? new Date(startDateTime) : null;
+      if (categories !== undefined) updates.categories = categories;
+      if (percentComplete !== undefined) updates.percentComplete = percentComplete;
+
+      const task = await taskService.updateTask(taskId, updates, listId);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `✅ Task updated successfully!\n\n📝 Title: ${task.title}\n📊 Status: ${task.status} (${task.percentComplete}% complete)`,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Error updating task: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          },
+        ],
+      };
+    }
+  }
+
+  /**
+   * Delete a task
+   */
+  private async deleteTask(args: any): Promise<any> {
+    const { taskId, listId, platform = 'microsoft' } = args;
+
+    try {
+      const adapter = this.platformManager.getAdapter(platform as Platform) as GraphAdapter;
+      if (!adapter || !adapter.isAuthenticated) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Not authenticated with ${platform}`,
+            },
+          ],
+        };
+      }
+
+      const taskService = adapter.getTaskService();
+      await taskService.deleteTask(taskId, listId);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `✅ Task deleted successfully!`,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Error deleting task: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          },
+        ],
+      };
+    }
+  }
+
+  /**
+   * Mark a task as completed
+   */
+  private async completeTask(args: any): Promise<any> {
+    const { taskId, listId, platform = 'microsoft' } = args;
+
+    try {
+      const adapter = this.platformManager.getAdapter(platform as Platform) as GraphAdapter;
+      if (!adapter || !adapter.isAuthenticated) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Not authenticated with ${platform}`,
+            },
+          ],
+        };
+      }
+
+      const taskService = adapter.getTaskService();
+      const task = await taskService.completeTask(taskId, listId);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `✅ Task completed!\n\n📝 Title: ${task.title}\n✔️ Completed at: ${task.completedDateTime?.toLocaleString()}`,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Error completing task: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          },
+        ],
+      };
+    }
+  }
+
+  /**
+   * Search tasks using semantic search
+   */
+  private async searchTasks(args: any): Promise<any> {
+    const { 
+      query,
+      listId,
+      status,
+      importance,
+      limit = 25,
+      platform = 'microsoft'
+    } = args;
+
+    try {
+      const adapter = this.platformManager.getAdapter(platform as Platform) as GraphAdapter;
+      if (!adapter || !adapter.isAuthenticated) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Not authenticated with ${platform}`,
+            },
+          ],
+        };
+      }
+
+      const taskService = adapter.getTaskService();
+      const tasks = await taskService.searchTasks(query, {
+        listId,
+        status,
+        importance,
+        limit
+      });
+
+      if (tasks.length === 0) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `No tasks found matching "${query}"`,
+            },
+          ],
+        };
+      }
+
+      const taskSummaries = tasks.map(task => {
+        const dueInfo = task.dueDateTime ? ` (Due: ${task.dueDateTime.toLocaleDateString()})` : '';
+        const statusIcon = task.status === 'completed' ? '✅' : 
+                          task.status === 'inProgress' ? '🔄' : '⏳';
+        const importanceIcon = task.importance === 'high' ? '🔴' :
+                               task.importance === 'low' ? '🔵' : '';
+        
+        return `${statusIcon} ${importanceIcon} ${task.title}${dueInfo}`;
+      });
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `🔍 Search results for "${query}" (${tasks.length} found):\n\n${taskSummaries.join('\n')}`,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Error searching tasks: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          },
+        ],
+      };
+    }
+  }
+
+  /**
+   * List available task lists
+   */
+  private async listTaskLists(args: any): Promise<any> {
+    const { platform = 'microsoft' } = args;
+
+    try {
+      const adapter = this.platformManager.getAdapter(platform as Platform) as GraphAdapter;
+      if (!adapter || !adapter.isAuthenticated) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Not authenticated with ${platform}`,
+            },
+          ],
+        };
+      }
+
+      const taskService = adapter.getTaskService();
+      const lists = await taskService.listTaskLists();
+
+      const listSummaries = lists.map(list => {
+        const defaultIcon = list.isDefault ? ' ⭐' : '';
+        return `📁 ${list.name}${defaultIcon} (ID: ${list.id})`;
+      });
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `📚 Task Lists (${lists.length}):\n\n${listSummaries.join('\n')}`,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Error listing task lists: ${error instanceof Error ? error.message : 'Unknown error'}`,
           },
         ],
       };
