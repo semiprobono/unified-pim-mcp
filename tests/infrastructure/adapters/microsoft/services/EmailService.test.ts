@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { EmailService } from '../../../../../src/infrastructure/adapters/microsoft/services/EmailService.js';
 import { GraphClient } from '../../../../../src/infrastructure/adapters/microsoft/clients/GraphClient.js';
 import { CacheManager } from '../../../../../src/infrastructure/adapters/microsoft/cache/CacheManager.js';
@@ -82,21 +82,23 @@ describe('EmailService', () => {
         from: {
           emailAddress: {
             address: 'sender@example.com',
-            name: 'Sender'
-          }
+            name: 'Sender',
+          },
         },
-        toRecipients: [{
-          emailAddress: {
-            address: 'recipient@example.com',
-            name: 'Recipient'
-          }
-        }],
+        toRecipients: [
+          {
+            emailAddress: {
+              address: 'recipient@example.com',
+              name: 'Recipient',
+            },
+          },
+        ],
         receivedDateTime: '2024-01-01T12:00:00Z',
         isRead: false,
         isDraft: false,
         importance: 'Normal',
         hasAttachments: false,
-        categories: []
+        categories: [],
       };
 
       mockCacheManager.get.mockResolvedValue(null);
@@ -111,8 +113,8 @@ describe('EmailService', () => {
         '/me/messages/test-id',
         expect.objectContaining({
           params: expect.objectContaining({
-            '$expand': 'attachments'
-          })
+            $expand: 'attachments',
+          }),
         })
       );
       expect(mockCacheManager.set).toHaveBeenCalled();
@@ -123,24 +125,28 @@ describe('EmailService', () => {
   describe('searchEmails', () => {
     it('should search emails with filters', async () => {
       const mockResponse = {
-        value: [{
-          id: 'email-1',
-          subject: 'Email 1',
-          body: { content: 'Content 1', contentType: 'Text' },
-          from: {
-            emailAddress: {
-              address: 'sender@example.com',
-              name: 'Sender'
-            }
+        value: [
+          {
+            id: 'email-1',
+            subject: 'Email 1',
+            body: { content: 'Content 1', contentType: 'Text' },
+            from: {
+              emailAddress: {
+                address: 'sender@example.com',
+                name: 'Sender',
+              },
+            },
+            toRecipients: [
+              {
+                emailAddress: {
+                  address: 'recipient@example.com',
+                },
+              },
+            ],
+            receivedDateTime: '2024-01-01T12:00:00Z',
           },
-          toRecipients: [{
-            emailAddress: {
-              address: 'recipient@example.com'
-            }
-          }],
-          receivedDateTime: '2024-01-01T12:00:00Z'
-        }],
-        '@odata.count': 1
+        ],
+        '@odata.count': 1,
       };
 
       mockGraphClient.get.mockResolvedValue(mockResponse);
@@ -149,7 +155,7 @@ describe('EmailService', () => {
       const result = await emailService.searchEmails({
         query: 'test',
         isRead: false,
-        limit: 25
+        limit: 25,
       });
 
       expect(result.success).toBe(true);
@@ -159,12 +165,12 @@ describe('EmailService', () => {
         '/me/messages',
         expect.objectContaining({
           params: expect.objectContaining({
-            '$top': 25,
-            '$skip': 0,
-            '$count': true,
-            '$search': '"test"',
-            '$filter': 'isRead eq false'
-          })
+            $top: 25,
+            $skip: 0,
+            $count: true,
+            $search: '"test"',
+            $filter: 'isRead eq false',
+          }),
         })
       );
     });
@@ -176,12 +182,14 @@ describe('EmailService', () => {
         subject: 'Test Email',
         body: {
           content: 'Test content',
-          contentType: 'text' as const
+          contentType: 'text' as const,
         },
-        to: [{
-          address: 'recipient@example.com',
-          displayName: 'Recipient'
-        }]
+        to: [
+          {
+            address: 'recipient@example.com',
+            displayName: 'Recipient',
+          },
+        ],
       };
 
       mockGraphClient.post.mockResolvedValue({ id: 'sent-id' });
@@ -190,10 +198,7 @@ describe('EmailService', () => {
 
       expect(result.success).toBe(true);
       expect(result.data).toBe('sent-id');
-      expect(mockGraphClient.post).toHaveBeenCalledWith(
-        '/me/sendMail',
-        expect.any(Object)
-      );
+      expect(mockGraphClient.post).toHaveBeenCalledWith('/me/sendMail', expect.any(Object));
     });
   });
 
@@ -205,10 +210,7 @@ describe('EmailService', () => {
       const result = await emailService.markAsRead('email-id', true);
 
       expect(result.success).toBe(true);
-      expect(mockGraphClient.patch).toHaveBeenCalledWith(
-        '/me/messages/email-id',
-        { isRead: true }
-      );
+      expect(mockGraphClient.patch).toHaveBeenCalledWith('/me/messages/email-id', { isRead: true });
       expect(mockCacheManager.delete).toHaveBeenCalledWith('graph:email:email-id');
     });
   });
@@ -226,7 +228,7 @@ describe('EmailService', () => {
       expect(mockCacheManager.delete).toHaveBeenCalledWith('graph:email:email-id');
       expect(mockChromaDb.deleteDocuments).toHaveBeenCalledWith({
         collection: 'graph-search-index',
-        ids: ['email_email-id']
+        ids: ['email_email-id'],
       });
     });
   });
@@ -239,10 +241,9 @@ describe('EmailService', () => {
       const result = await emailService.moveToFolder('email-id', 'folder-id');
 
       expect(result.success).toBe(true);
-      expect(mockGraphClient.post).toHaveBeenCalledWith(
-        '/me/messages/email-id/move',
-        { destinationId: 'folder-id' }
-      );
+      expect(mockGraphClient.post).toHaveBeenCalledWith('/me/messages/email-id/move', {
+        destinationId: 'folder-id',
+      });
       expect(mockCacheManager.delete).toHaveBeenCalledWith('graph:email:email-id');
     });
   });
@@ -253,8 +254,8 @@ describe('EmailService', () => {
         subject: 'Draft Email',
         body: {
           content: 'Draft content',
-          contentType: 'text' as const
-        }
+          contentType: 'text' as const,
+        },
       };
 
       const mockResponse = {
@@ -263,7 +264,7 @@ describe('EmailService', () => {
         isDraft: true,
         from: { emailAddress: { address: 'me@example.com' } },
         toRecipients: [],
-        receivedDateTime: '2024-01-01T12:00:00Z'
+        receivedDateTime: '2024-01-01T12:00:00Z',
       };
 
       mockGraphClient.post.mockResolvedValue(mockResponse);
@@ -272,10 +273,7 @@ describe('EmailService', () => {
       const result = await emailService.createDraft(draft as any);
 
       expect(result.success).toBe(true);
-      expect(mockGraphClient.post).toHaveBeenCalledWith(
-        '/me/messages',
-        expect.any(Object)
-      );
+      expect(mockGraphClient.post).toHaveBeenCalledWith('/me/messages', expect.any(Object));
     });
   });
 
@@ -284,8 +282,8 @@ describe('EmailService', () => {
       const reply = {
         body: {
           content: 'Reply content',
-          contentType: 'text' as const
-        }
+          contentType: 'text' as const,
+        },
       };
 
       mockGraphClient.post.mockResolvedValue({});
@@ -304,8 +302,8 @@ describe('EmailService', () => {
       const reply = {
         body: {
           content: 'Reply all content',
-          contentType: 'text' as const
-        }
+          contentType: 'text' as const,
+        },
       };
 
       mockGraphClient.post.mockResolvedValue({});
@@ -323,14 +321,16 @@ describe('EmailService', () => {
   describe('forwardEmail', () => {
     it('should forward an email', async () => {
       const forward = {
-        to: [{
-          address: 'forward@example.com',
-          displayName: 'Forward Recipient'
-        }],
+        to: [
+          {
+            address: 'forward@example.com',
+            displayName: 'Forward Recipient',
+          },
+        ],
         body: {
           content: 'Forward message',
-          contentType: 'text' as const
-        }
+          contentType: 'text' as const,
+        },
       };
 
       mockGraphClient.post.mockResolvedValue({});
@@ -351,8 +351,8 @@ describe('EmailService', () => {
       const mockFolders = {
         value: [
           { id: 'inbox', displayName: 'Inbox' },
-          { id: 'sent', displayName: 'Sent Items' }
-        ]
+          { id: 'sent', displayName: 'Sent Items' },
+        ],
       };
 
       mockGraphClient.get.mockResolvedValue(mockFolders);

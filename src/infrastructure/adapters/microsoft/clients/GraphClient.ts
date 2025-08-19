@@ -2,7 +2,7 @@ import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { Logger } from '../../../../shared/logging/Logger.js';
 import { MsalAuthProvider } from '../auth/MsalAuthProvider.js';
 import { TokenRefreshService } from '../auth/TokenRefreshService.js';
-import { RateLimiter, RateLimitConfig } from './RateLimiter.js';
+import { RateLimitConfig, RateLimiter } from './RateLimiter.js';
 import { CircuitBreaker, CircuitBreakerConfig } from './CircuitBreaker.js';
 import { MsalConfig } from '../auth/MsalConfig.js';
 
@@ -64,7 +64,7 @@ export class GraphClient {
       timeout: 30000, // 30 seconds
       headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/json',
+        Accept: 'application/json',
       },
     });
 
@@ -78,7 +78,7 @@ export class GraphClient {
   private setupInterceptors(): void {
     // Request interceptor for authentication
     this.axiosInstance.interceptors.request.use(
-      async (config) => {
+      async config => {
         // Add authentication header if not skipped
         if (!config.headers['skipAuth']) {
           const token = await this.getAccessToken();
@@ -96,7 +96,7 @@ export class GraphClient {
 
         return config;
       },
-      (error) => {
+      error => {
         this.logger.error('Request interceptor error', error);
         return Promise.reject(error);
       }
@@ -104,10 +104,18 @@ export class GraphClient {
 
     // Response interceptor for error handling and rate limit updates
     this.axiosInstance.interceptors.response.use(
-      (response) => {
+      response => {
         // Update rate limit status from response headers
         if (response.headers) {
-          this.rateLimiter.updateRateLimitStatus(response.headers);
+          // Convert AxiosResponseHeaders to Record<string, string>
+          const headers: Record<string, string> = {};
+          Object.keys(response.headers).forEach(key => {
+            const value = response.headers[key];
+            if (typeof value === 'string') {
+              headers[key] = value;
+            }
+          });
+          this.rateLimiter.updateRateLimitStatus(headers);
         }
 
         // Log successful response
@@ -115,7 +123,7 @@ export class GraphClient {
 
         return response;
       },
-      async (error) => {
+      async error => {
         if (error.response) {
           const { status, data, headers } = error.response;
 
@@ -188,10 +196,7 @@ export class GraphClient {
 
     const tokens = await this.tokenService.retrieveTokens(this.userId);
     if (tokens?.refreshToken) {
-      const refreshed = await this.tokenService.refreshTokens(
-        tokens.refreshToken,
-        tokens.scopes
-      );
+      const refreshed = await this.tokenService.refreshTokens(tokens.refreshToken, tokens.scopes);
       await this.tokenService.storeTokens(refreshed, this.userId);
     }
   }
@@ -266,16 +271,12 @@ export class GraphClient {
     const executeRequest = async () => {
       if (!options?.skipRateLimit) {
         return this.rateLimiter.executeWithRateLimit(
-          () => this.circuitBreaker.execute(
-            () => this.axiosInstance.request<T>(requestConfig)
-          ),
+          () => this.circuitBreaker.execute(() => this.axiosInstance.request<T>(requestConfig)),
           endpoint,
           options?.retries || 3
         );
       } else {
-        return this.circuitBreaker.execute(
-          () => this.axiosInstance.request<T>(requestConfig)
-        );
+        return this.circuitBreaker.execute(() => this.axiosInstance.request<T>(requestConfig));
       }
     };
 
@@ -304,11 +305,9 @@ export class GraphClient {
     };
 
     // Execute batch request
-    const response = await this.post<{ responses: BatchResponseItem[] }>(
-      '/$batch',
-      batchBody,
-      { apiVersion: 'v1.0' }
-    );
+    const response = await this.post<{ responses: BatchResponseItem[] }>('/$batch', batchBody, {
+      apiVersion: 'v1.0',
+    });
 
     return response.responses;
   }
@@ -323,10 +322,11 @@ export class GraphClient {
     let nextLink: string | null = endpoint;
 
     while (nextLink) {
-      const response = await this.get<{
+      type PaginatedResponse = {
         value: T[];
         '@odata.nextLink'?: string;
-      }>(nextLink, options);
+      };
+      const response: PaginatedResponse = await this.get<PaginatedResponse>(nextLink, options);
 
       yield response.value;
 

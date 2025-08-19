@@ -6,6 +6,22 @@ This guide will get you from zero to hero with the ultimate development setup in
 
 ## 🎯 QUICK START - GET AMAZING IN 5 MINUTES!
 
+### ⚡ PRODUCTION-READY AZURE AD SETUP (NEW!)
+```powershell
+# 1. Create Azure AD app (2 minutes manual step)
+# Follow: config/azure/MANUAL_SETUP_GUIDE.md
+
+# 2. Configure environment (30 seconds)
+npm run azure:configure -- -ClientId "YOUR_CLIENT_ID" -TenantId "YOUR_TENANT_ID"
+
+# 3. Validate & test (1 minute)
+npm run azure:validate
+npm run azure:test:oauth
+
+# 4. Launch! (1 minute)
+npm run docker:up && npm run dev:microsoft
+```
+
 ### Option 1: Interactive Setup (Recommended for first-time users)
 ```powershell
 npm run cli:interactive

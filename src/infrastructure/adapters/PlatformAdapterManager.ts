@@ -28,7 +28,7 @@ export class PlatformAdapterManager {
    */
   async initialize(): Promise<void> {
     this.logger.info('Initializing platform adapter manager');
-    
+
     try {
       // Initialize Microsoft Graph adapter if configured
       if (this.config.microsoft?.enabled) {
@@ -38,7 +38,7 @@ export class PlatformAdapterManager {
           this.securityManager,
           this.logger
         );
-        
+
         await graphAdapter.initialize();
         this.adapters.set('microsoft', graphAdapter);
         this.logger.info('Microsoft Graph adapter initialized and registered');
@@ -47,13 +47,12 @@ export class PlatformAdapterManager {
       // Google and Apple adapters would be initialized here when implemented
       // if (this.config.google?.enabled) { ... }
       // if (this.config.apple?.enabled) { ... }
-      
+
       this.isInitialized = true;
       this.logger.info('Platform adapter manager initialized', {
         adaptersCount: this.adapters.size,
-        platforms: Array.from(this.adapters.keys())
+        platforms: Array.from(this.adapters.keys()),
       });
-      
     } catch (error) {
       this.logger.error('Failed to initialize platform adapters', error);
       throw error;
@@ -72,28 +71,28 @@ export class PlatformAdapterManager {
    */
   async getStatus(): Promise<Record<Platform, any>> {
     const status: any = {};
-    
+
     for (const [platform, adapter] of this.adapters) {
       try {
         const health = await adapter.healthCheck();
         const lastSync = await adapter.getLastSyncTime();
-        
+
         status[platform] = {
           available: adapter.isAvailable,
           authenticated: adapter.isAuthenticated,
           lastSync: lastSync?.toISOString() || null,
-          health: health.success ? health.data : null
+          health: health.success ? health.data : null,
         };
       } catch (error) {
         status[platform] = {
           available: false,
           authenticated: false,
           lastSync: null,
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: error instanceof Error ? error.message : 'Unknown error',
         };
       }
     }
-    
+
     // Add status for non-initialized platforms
     for (const platform of ['microsoft', 'google', 'apple'] as Platform[]) {
       if (!status[platform]) {
@@ -101,11 +100,11 @@ export class PlatformAdapterManager {
           available: false,
           authenticated: false,
           lastSync: null,
-          initialized: false
+          initialized: false,
         };
       }
     }
-    
+
     return status;
   }
 
@@ -114,7 +113,7 @@ export class PlatformAdapterManager {
    */
   async dispose(): Promise<void> {
     this.logger.info('Disposing platform adapter manager');
-    
+
     for (const [platform, adapter] of this.adapters) {
       try {
         await adapter.dispose();
@@ -122,7 +121,7 @@ export class PlatformAdapterManager {
         this.logger.error(`Failed to dispose ${platform} adapter:`, error);
       }
     }
-    
+
     this.adapters.clear();
     this.isInitialized = false;
   }

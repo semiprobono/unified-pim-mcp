@@ -92,7 +92,7 @@ export interface FreeBusyInfo {
   slots: FreeBusySlot[];
   workingHours?: {
     start: string; // e.g., "09:00"
-    end: string;   // e.g., "17:00"
+    end: string; // e.g., "17:00"
     timezone: string;
   };
   error?: string;
@@ -125,7 +125,7 @@ export interface PlatformPort {
   authenticate(): Promise<boolean>;
   refreshToken(): Promise<boolean>;
   isTokenValid(): Promise<boolean>;
-  
+
   // Email operations
   fetchEmails(criteria: SearchCriteria): Promise<PlatformResult<Email[]>>;
   getEmail(id: string): Promise<PlatformResult<Email>>;
@@ -133,10 +133,10 @@ export interface PlatformPort {
   updateEmail(id: string, updates: Partial<Email>): Promise<PlatformResult<Email>>;
   deleteEmail(id: string): Promise<PlatformResult<boolean>>;
   searchEmails(query: string, criteria?: SearchCriteria): Promise<PlatformResult<Email[]>>;
-  
+
   // Email batch operations
   batchEmailOperations(operations: BatchOperation<Email>[]): Promise<BatchResult<Email>>;
-  
+
   // Calendar operations
   fetchEvents(criteria: SearchCriteria): Promise<PlatformResult<CalendarEvent[]>>;
   getEvent(id: string): Promise<PlatformResult<CalendarEvent>>;
@@ -144,9 +144,12 @@ export interface PlatformPort {
   updateEvent(id: string, updates: Partial<CalendarEvent>): Promise<PlatformResult<CalendarEvent>>;
   deleteEvent(id: string): Promise<PlatformResult<boolean>>;
   searchEvents(query: string, criteria?: SearchCriteria): Promise<PlatformResult<CalendarEvent[]>>;
-  
+
   // Free/busy operations
-  getFreeBusyInfo(emails: EmailAddress[], dateRange: DateRange): Promise<PlatformResult<FreeBusyInfo[]>>;
+  getFreeBusyInfo(
+    emails: EmailAddress[],
+    dateRange: DateRange
+  ): Promise<PlatformResult<FreeBusyInfo[]>>;
   findFreeTime(
     attendees: EmailAddress[],
     duration: number, // in minutes
@@ -157,10 +160,12 @@ export interface PlatformPort {
       maxSuggestions?: number;
     }
   ): Promise<PlatformResult<TimeSlotSuggestion[]>>;
-  
+
   // Calendar batch operations
-  batchEventOperations(operations: BatchOperation<CalendarEvent>[]): Promise<BatchResult<CalendarEvent>>;
-  
+  batchEventOperations(
+    operations: BatchOperation<CalendarEvent>[]
+  ): Promise<BatchResult<CalendarEvent>>;
+
   // Contact operations
   fetchContacts(criteria: SearchCriteria): Promise<PlatformResult<Contact[]>>;
   getContact(id: string): Promise<PlatformResult<Contact>>;
@@ -168,10 +173,10 @@ export interface PlatformPort {
   updateContact(id: string, updates: Partial<Contact>): Promise<PlatformResult<Contact>>;
   deleteContact(id: string): Promise<PlatformResult<boolean>>;
   searchContacts(query: string, criteria?: SearchCriteria): Promise<PlatformResult<Contact[]>>;
-  
+
   // Contact batch operations
   batchContactOperations(operations: BatchOperation<Contact>[]): Promise<BatchResult<Contact>>;
-  
+
   // Task operations
   fetchTasks(criteria: SearchCriteria): Promise<PlatformResult<Task[]>>;
   getTask(id: string): Promise<PlatformResult<Task>>;
@@ -179,10 +184,10 @@ export interface PlatformPort {
   updateTask(id: string, updates: Partial<Task>): Promise<PlatformResult<Task>>;
   deleteTask(id: string): Promise<PlatformResult<boolean>>;
   searchTasks(query: string, criteria?: SearchCriteria): Promise<PlatformResult<Task[]>>;
-  
+
   // Task batch operations
   batchTaskOperations(operations: BatchOperation<Task>[]): Promise<BatchResult<Task>>;
-  
+
   // File operations
   fetchFiles(criteria: SearchCriteria): Promise<PlatformResult<File[]>>;
   getFile(id: string): Promise<PlatformResult<File>>;
@@ -196,48 +201,57 @@ export interface PlatformPort {
   updateFile(id: string, updates: Partial<File>): Promise<PlatformResult<File>>;
   deleteFile(id: string): Promise<PlatformResult<boolean>>;
   searchFiles(query: string, criteria?: SearchCriteria): Promise<PlatformResult<File[]>>;
-  
+
   // File batch operations
   batchFileOperations(operations: BatchOperation<File>[]): Promise<BatchResult<File>>;
-  
+
   // Unified search across all data types
-  unifiedSearch(query: string, options?: {
-    types?: ('email' | 'event' | 'contact' | 'task' | 'file')[];
-    limit?: number;
-    dateRange?: DateRange;
-  }): Promise<PlatformResult<{
-    emails: Email[];
-    events: CalendarEvent[];
-    contacts: Contact[];
-    tasks: Task[];
-    files: File[];
-  }>>;
-  
+  unifiedSearch(
+    query: string,
+    options?: {
+      types?: ('email' | 'event' | 'contact' | 'task' | 'file')[];
+      limit?: number;
+      dateRange?: DateRange;
+    }
+  ): Promise<
+    PlatformResult<{
+      emails: Email[];
+      events: CalendarEvent[];
+      contacts: Contact[];
+      tasks: Task[];
+      files: File[];
+    }>
+  >;
+
   // Health and status
-  healthCheck(): Promise<PlatformResult<{
-    status: 'healthy' | 'degraded' | 'unhealthy';
-    latency: number;
-    details?: Record<string, any>;
-  }>>;
-  
+  healthCheck(): Promise<
+    PlatformResult<{
+      status: 'healthy' | 'degraded' | 'unhealthy';
+      latency: number;
+      details?: Record<string, any>;
+    }>
+  >;
+
   // Sync operations
   getLastSyncTime(): Promise<Date | null>;
   sync(options?: {
     incremental?: boolean;
     types?: ('email' | 'event' | 'contact' | 'task' | 'file')[];
-  }): Promise<PlatformResult<{
-    synced: number;
-    errors: number;
-    duration: number;
-  }>>;
-  
+  }): Promise<
+    PlatformResult<{
+      synced: number;
+      errors: number;
+      duration: number;
+    }>
+  >;
+
   // Rate limiting information
   getRateLimitStatus(): Promise<{
     remaining: number;
     reset: Date;
     limit: number;
   }>;
-  
+
   // Clean up resources
   dispose(): Promise<void>;
 }
@@ -250,12 +264,12 @@ export interface PlatformCapabilityChecker {
    * Checks if the platform supports a specific operation
    */
   supports(operation: string): boolean;
-  
+
   /**
    * Gets the list of supported operations
    */
   getSupportedOperations(): string[];
-  
+
   /**
    * Gets platform-specific limitations
    */
@@ -281,13 +295,18 @@ export interface PlatformHealthMonitor {
     errors: string[];
     lastCheck: Date;
   }>;
-  
-  getHealthStatus(): Promise<Record<Platform, {
-    isHealthy: boolean;
-    latency: number;
-    errors: string[];
-    lastCheck: Date;
-  }>>;
+
+  getHealthStatus(): Promise<
+    Record<
+      Platform,
+      {
+        isHealthy: boolean;
+        latency: number;
+        errors: string[];
+        lastCheck: Date;
+      }
+    >
+  >;
 }
 
 /**
@@ -304,7 +323,7 @@ export enum PlatformErrorType {
   SERVER_ERROR = 'SERVER_ERROR',
   TIMEOUT = 'TIMEOUT',
   QUOTA_EXCEEDED = 'QUOTA_EXCEEDED',
-  UNKNOWN_ERROR = 'UNKNOWN_ERROR'
+  UNKNOWN_ERROR = 'UNKNOWN_ERROR',
 }
 
 /**

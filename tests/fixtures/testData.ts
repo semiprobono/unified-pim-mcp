@@ -123,7 +123,9 @@ export const TEST_ENDPOINTS = {
 /**
  * Mock HTTP response headers
  */
-export const createMockHeaders = (overrides: Record<string, string> = {}): Record<string, string> => ({
+export const createMockHeaders = (
+  overrides: Record<string, string> = {}
+): Record<string, string> => ({
   'content-type': 'application/json',
   'x-ratelimit-remaining': '9999',
   'x-ratelimit-limit': '10000',
@@ -183,29 +185,28 @@ export const TEST_ERRORS = {
   NETWORK_ERROR: new Error('Network request failed'),
   TIMEOUT_ERROR: new Error('Request timeout'),
   INVALID_TOKEN: new Error('Invalid access token'),
-  RATE_LIMIT_ERROR: Object.assign(new Error('Rate limit exceeded'), { 
-    response: { 
-      status: 429, 
-      headers: { 'retry-after': '300' } 
-    } 
+  RATE_LIMIT_ERROR: Object.assign(new Error('Rate limit exceeded'), {
+    response: {
+      status: 429,
+      headers: { 'retry-after': '300' },
+    },
   }),
-  SERVER_ERROR: Object.assign(new Error('Internal server error'), { 
-    response: { 
-      status: 500 
-    } 
+  SERVER_ERROR: Object.assign(new Error('Internal server error'), {
+    response: {
+      status: 500,
+    },
   }),
-  SERVICE_UNAVAILABLE: Object.assign(new Error('Service unavailable'), { 
-    response: { 
-      status: 503 
-    } 
+  SERVICE_UNAVAILABLE: Object.assign(new Error('Service unavailable'), {
+    response: {
+      status: 503,
+    },
   }),
 };
 
 /**
  * Sleep utility for tests
  */
-export const sleep = (ms: number): Promise<void> => 
-  new Promise(resolve => setTimeout(resolve, ms));
+export const sleep = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
  * Create mock cache entry
@@ -255,7 +256,10 @@ export const createMockSyncMetadata = (overrides: Record<string, any> = {}) => (
 /**
  * Performance test data generators
  */
-export const generateLargeDataset = (size: number, type: 'messages' | 'events' | 'contacts' = 'messages') => {
+export const generateLargeDataset = (
+  size: number,
+  type: 'messages' | 'events' | 'contacts' = 'messages'
+) => {
   const items = [];
   for (let i = 0; i < size; i++) {
     switch (type) {
@@ -273,7 +277,9 @@ export const generateLargeDataset = (size: number, type: 'messages' | 'events' |
           id: generateTestId('evt'),
           subject: `Test Event ${i}`,
           start: { dateTime: new Date(Date.now() + Math.random() * 86400000 * 30).toISOString() },
-          end: { dateTime: new Date(Date.now() + Math.random() * 86400000 * 30 + 3600000).toISOString() },
+          end: {
+            dateTime: new Date(Date.now() + Math.random() * 86400000 * 30 + 3600000).toISOString(),
+          },
           isOrganizer: Math.random() > 0.5,
         });
         break;
@@ -293,7 +299,10 @@ export const generateLargeDataset = (size: number, type: 'messages' | 'events' |
 /**
  * Test utilities for async operations
  */
-export const waitFor = async (condition: () => boolean | Promise<boolean>, timeout: number = 5000): Promise<void> => {
+export const waitFor = async (
+  condition: () => boolean | Promise<boolean>,
+  timeout: number = 5000
+): Promise<void> => {
   const start = Date.now();
   while (Date.now() - start < timeout) {
     if (await condition()) {

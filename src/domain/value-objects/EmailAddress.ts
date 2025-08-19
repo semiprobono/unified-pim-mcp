@@ -46,7 +46,11 @@ export class EmailAddress {
   /**
    * Creates a primary email address
    */
-  static primary(email: string, displayName?: string, type: 'personal' | 'work' | 'other' = 'personal'): EmailAddress {
+  static primary(
+    email: string,
+    displayName?: string,
+    type: 'personal' | 'work' | 'other' = 'personal'
+  ): EmailAddress {
     return new EmailAddress(email, displayName, type, true);
   }
 
@@ -86,13 +90,26 @@ export class EmailAddress {
    */
   get isLikelyWork(): boolean {
     const workDomains = [
-      'company.com', 'corp.com', 'enterprise.com', 'business.com',
-      'office.com', 'work.com', 'professional.com'
+      'company.com',
+      'corp.com',
+      'enterprise.com',
+      'business.com',
+      'office.com',
+      'work.com',
+      'professional.com',
     ];
-    
+
     const personalDomains = [
-      'gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'aol.com',
-      'icloud.com', 'me.com', 'mac.com', 'protonmail.com', 'tutanota.com'
+      'gmail.com',
+      'yahoo.com',
+      'hotmail.com',
+      'outlook.com',
+      'aol.com',
+      'icloud.com',
+      'me.com',
+      'mac.com',
+      'protonmail.com',
+      'tutanota.com',
     ];
 
     if (personalDomains.includes(this.domain.toLowerCase())) {
@@ -113,7 +130,7 @@ export class EmailAddress {
    */
   get provider(): string {
     const domain = this.domain.toLowerCase();
-    
+
     const providers: Record<string, string> = {
       'gmail.com': 'Gmail',
       'googlemail.com': 'Gmail',
@@ -128,7 +145,7 @@ export class EmailAddress {
       'me.com': 'iCloud',
       'mac.com': 'iCloud',
       'protonmail.com': 'ProtonMail',
-      'tutanota.com': 'Tutanota'
+      'tutanota.com': 'Tutanota',
     };
 
     return providers[domain] || 'Other';
@@ -233,12 +250,14 @@ export class EmailAddress {
       if (names.length >= 2) {
         const firstName = names[0];
         const lastName = names[names.length - 1];
-        return (firstName?.charAt(0).toUpperCase() ?? '') + (lastName?.charAt(0).toUpperCase() ?? '');
+        return (
+          (firstName?.charAt(0).toUpperCase() ?? '') + (lastName?.charAt(0).toUpperCase() ?? '')
+        );
       }
       const firstWord = names[0];
       return firstWord?.charAt(0).toUpperCase() ?? '';
     }
-    
+
     // Use email local part
     const localPart = this.localPart;
     if (localPart.includes('.')) {
@@ -247,7 +266,7 @@ export class EmailAddress {
       const lastPart = parts[parts.length - 1];
       return (firstPart?.charAt(0).toUpperCase() ?? '') + (lastPart?.charAt(0).toUpperCase() ?? '');
     }
-    
+
     return localPart.charAt(0).toUpperCase();
   }
 
@@ -256,30 +275,33 @@ export class EmailAddress {
    */
   validate(): { isValid: boolean; errors: string[] } {
     const errors: string[] = [];
-    
+
     if (!this.address || this.address.trim().length === 0) {
       errors.push('Email address cannot be empty');
     }
-    
+
     if (!this.emailRegex.test(this.address)) {
       errors.push('Invalid email address format');
     }
-    
-    if (this.address.length > 320) { // RFC 5321 limit
+
+    if (this.address.length > 320) {
+      // RFC 5321 limit
       errors.push('Email address too long (max 320 characters)');
     }
-    
-    if (this.localPart.length > 64) { // RFC 5321 limit
+
+    if (this.localPart.length > 64) {
+      // RFC 5321 limit
       errors.push('Local part too long (max 64 characters)');
     }
-    
-    if (this.domain.length > 253) { // RFC 5321 limit
+
+    if (this.domain.length > 253) {
+      // RFC 5321 limit
       errors.push('Domain part too long (max 253 characters)');
     }
-    
+
     return {
       isValid: errors.length === 0,
-      errors
+      errors,
     };
   }
 
@@ -307,7 +329,7 @@ export class EmailAddress {
       isGoogle: this.isGoogle,
       isApple: this.isApple,
       displayString: this.displayString,
-      initials: this.initials
+      initials: this.initials,
     };
   }
 

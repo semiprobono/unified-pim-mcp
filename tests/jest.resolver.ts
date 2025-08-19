@@ -1,6 +1,6 @@
 /**
  * Custom Jest Module Resolver
- * 
+ *
  * This resolver handles module resolution for the test environment,
  * particularly for ES modules and path aliases.
  */

@@ -82,7 +82,7 @@ export class EmailMetadataImpl implements EmailMetadata {
       size,
       isFromMe,
       false, // isDraft
-      true,  // isRead (assume read when created)
+      true, // isRead (assume read when created)
       false, // hasAttachments
       'normal', // sensitivity
       new Date() // lastSyncTime
@@ -92,18 +92,14 @@ export class EmailMetadataImpl implements EmailMetadata {
   /**
    * Creates metadata for a draft email
    */
-  static createDraft(
-    platform: Platform,
-    messageId: string,
-    size: number = 0
-  ): EmailMetadataImpl {
+  static createDraft(platform: Platform, messageId: string, size: number = 0): EmailMetadataImpl {
     return new EmailMetadataImpl(
       platform,
       messageId,
       size,
-      true,  // isFromMe (drafts are from user)
-      true,  // isDraft
-      true,  // isRead
+      true, // isFromMe (drafts are from user)
+      true, // isDraft
+      true, // isRead
       false, // hasAttachments
       'normal', // sensitivity
       new Date() // lastSyncTime
@@ -131,12 +127,12 @@ export class EmailMetadataImpl implements EmailMetadata {
     const units = ['B', 'KB', 'MB', 'GB'];
     let size = this.size;
     let unitIndex = 0;
-    
+
     while (size >= 1024 && unitIndex < units.length - 1) {
       size /= 1024;
       unitIndex++;
     }
-    
+
     return `${size.toFixed(unitIndex > 0 ? 1 : 0)} ${units[unitIndex]}`;
   }
 
@@ -255,7 +251,7 @@ export class EmailMetadataImpl implements EmailMetadata {
   withCustomProperty(key: string, value: any): EmailMetadataImpl {
     const newCustomProperties = {
       ...this.customProperties,
-      [key]: value
+      [key]: value,
     };
 
     return new EmailMetadataImpl(
@@ -324,19 +320,21 @@ export class EmailMetadataImpl implements EmailMetadata {
       webLink: this.webLink,
       changeKey: this.changeKey,
       bodyPreview: this.bodyPreview,
-      flag: this.flag ? {
-        ...this.flag,
-        startDate: this.flag.startDate?.toISOString(),
-        dueDate: this.flag.dueDate?.toISOString(),
-        completedDate: this.flag.completedDate?.toISOString()
-      } : undefined,
+      flag: this.flag
+        ? {
+            ...this.flag,
+            startDate: this.flag.startDate?.toISOString(),
+            dueDate: this.flag.dueDate?.toISOString(),
+            completedDate: this.flag.completedDate?.toISOString(),
+          }
+        : undefined,
       isFlagged: this.isFlagged,
       isFlagCompleted: this.isFlagCompleted,
       classification: this.classification,
       internetMessageHeaders: this.internetMessageHeaders,
       deliveryReceiptRequested: this.deliveryReceiptRequested,
       readReceiptRequested: this.readReceiptRequested,
-      customProperties: this.customProperties
+      customProperties: this.customProperties,
     };
   }
 
@@ -361,12 +359,14 @@ export class EmailMetadataImpl implements EmailMetadata {
       json.webLink,
       json.changeKey,
       json.bodyPreview,
-      json.flag ? {
-        flagStatus: json.flag.flagStatus,
-        startDate: json.flag.startDate ? new Date(json.flag.startDate) : undefined,
-        dueDate: json.flag.dueDate ? new Date(json.flag.dueDate) : undefined,
-        completedDate: json.flag.completedDate ? new Date(json.flag.completedDate) : undefined
-      } : undefined,
+      json.flag
+        ? {
+            flagStatus: json.flag.flagStatus,
+            startDate: json.flag.startDate ? new Date(json.flag.startDate) : undefined,
+            dueDate: json.flag.dueDate ? new Date(json.flag.dueDate) : undefined,
+            completedDate: json.flag.completedDate ? new Date(json.flag.completedDate) : undefined,
+          }
+        : undefined,
       json.classification,
       json.internetMessageHeaders,
       json.deliveryReceiptRequested,

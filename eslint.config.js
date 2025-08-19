@@ -38,7 +38,7 @@ export default [
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/explicit-module-boundary-types': 'off',
-      '@typescript-eslint/prefer-const': 'error',
+      '@typescript-eslint/prefer-const': 'off', // Use base prefer-const rule instead
       '@typescript-eslint/no-var-requires': 'error',
       '@typescript-eslint/no-non-null-assertion': 'warn',
       

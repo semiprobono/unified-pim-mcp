@@ -1,4 +1,13 @@
-import { addDays, isAfter, isBefore, isEqual, startOfDay, endOfDay, differenceInMilliseconds, format } from 'date-fns';
+import {
+  addDays,
+  differenceInMilliseconds,
+  endOfDay,
+  format,
+  isAfter,
+  isBefore,
+  isEqual,
+  startOfDay,
+} from 'date-fns';
 
 /**
  * Date range value object with validation and utility methods
@@ -12,7 +21,7 @@ export class DateRange {
     if (isAfter(start, end)) {
       throw new Error('Start date must be before or equal to end date');
     }
-    
+
     this.start = new Date(start);
     this.end = new Date(end);
   }
@@ -39,10 +48,10 @@ export class DateRange {
     const now = new Date();
     const startOfWeek = new Date(now);
     startOfWeek.setDate(now.getDate() - now.getDay());
-    
+
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(startOfWeek.getDate() + 6);
-    
+
     return new DateRange(startOfDay(startOfWeek), endOfDay(endOfWeek));
   }
 
@@ -53,7 +62,7 @@ export class DateRange {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    
+
     return new DateRange(startOfDay(startOfMonth), endOfDay(endOfMonth));
   }
 
@@ -158,8 +167,10 @@ export class DateRange {
    * Checks if a date is within this range
    */
   contains(date: Date): boolean {
-    return (isEqual(date, this.start) || isAfter(date, this.start)) &&
-           (isEqual(date, this.end) || isBefore(date, this.end));
+    return (
+      (isEqual(date, this.start) || isAfter(date, this.start)) &&
+      (isEqual(date, this.end) || isBefore(date, this.end))
+    );
   }
 
   /**
@@ -173,8 +184,10 @@ export class DateRange {
    * Checks if this range completely contains another range
    */
   fullyContains(other: DateRange): boolean {
-    return (isEqual(this.start, other.start) || isBefore(this.start, other.start)) &&
-           (isEqual(this.end, other.end) || isAfter(this.end, other.end));
+    return (
+      (isEqual(this.start, other.start) || isBefore(this.start, other.start)) &&
+      (isEqual(this.end, other.end) || isAfter(this.end, other.end))
+    );
   }
 
   /**
@@ -184,10 +197,10 @@ export class DateRange {
     if (!this.overlaps(other)) {
       return null;
     }
-    
+
     const intersectionStart = isAfter(this.start, other.start) ? this.start : other.start;
     const intersectionEnd = isBefore(this.end, other.end) ? this.end : other.end;
-    
+
     return new DateRange(intersectionStart, intersectionEnd);
   }
 
@@ -198,14 +211,14 @@ export class DateRange {
     // Check if ranges overlap or are adjacent
     const gap = Math.abs(differenceInMilliseconds(this.end, other.start));
     const adjacentGap = Math.abs(differenceInMilliseconds(other.end, this.start));
-    
+
     if (!this.overlaps(other) && gap > 1000 && adjacentGap > 1000) {
       return null; // Ranges are not adjacent or overlapping
     }
-    
+
     const unionStart = isBefore(this.start, other.start) ? this.start : other.start;
     const unionEnd = isAfter(this.end, other.end) ? this.end : other.end;
-    
+
     return new DateRange(unionStart, unionEnd);
   }
 
@@ -234,13 +247,15 @@ export class DateRange {
   split(intervalMs: number): DateRange[] {
     const ranges: DateRange[] = [];
     let currentStart = new Date(this.start);
-    
+
     while (isBefore(currentStart, this.end)) {
-      const currentEnd = new Date(Math.min(currentStart.getTime() + intervalMs, this.end.getTime()));
+      const currentEnd = new Date(
+        Math.min(currentStart.getTime() + intervalMs, this.end.getTime())
+      );
       ranges.push(new DateRange(currentStart, currentEnd));
       currentStart = new Date(currentEnd.getTime() + 1); // Add 1ms to avoid overlap
     }
-    
+
     return ranges;
   }
 
@@ -251,12 +266,12 @@ export class DateRange {
     const days: Date[] = [];
     let currentDay = startOfDay(this.start);
     const endDay = startOfDay(this.end);
-    
+
     while (!isAfter(currentDay, endDay)) {
       days.push(new Date(currentDay));
       currentDay = addDays(currentDay, 1);
     }
-    
+
     return days;
   }
 
@@ -266,11 +281,11 @@ export class DateRange {
   format(dateFormat: string = 'yyyy-MM-dd', separator: string = ' to '): string {
     const startFormatted = format(this.start, dateFormat);
     const endFormatted = format(this.end, dateFormat);
-    
+
     if (this.isSingleDay) {
       return startFormatted;
     }
-    
+
     return `${startFormatted}${separator}${endFormatted}`;
   }
 
@@ -279,7 +294,7 @@ export class DateRange {
    */
   toHumanString(): string {
     const now = new Date();
-    
+
     if (this.isSingleDay) {
       if (this.start.toDateString() === now.toDateString()) {
         return 'Today';
@@ -291,7 +306,7 @@ export class DateRange {
         return format(this.start, 'MMM d, yyyy');
       }
     }
-    
+
     const daysDiff = this.durationDays;
     if (daysDiff === 7) {
       return '1 week';
@@ -340,7 +355,7 @@ export class DateRange {
       isInPast: this.isInPast,
       isInFuture: this.isInFuture,
       isActive: this.isActive,
-      humanString: this.toHumanString()
+      humanString: this.toHumanString(),
     };
   }
 

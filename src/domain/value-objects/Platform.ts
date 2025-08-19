@@ -7,20 +7,25 @@ export type Platform = 'microsoft' | 'google' | 'apple' | 'unified';
  * Platform configuration and utilities
  */
 export class PlatformConfig {
-  static readonly SUPPORTED_PLATFORMS: readonly Platform[] = ['microsoft', 'google', 'apple', 'unified'] as const;
-  
+  static readonly SUPPORTED_PLATFORMS: readonly Platform[] = [
+    'microsoft',
+    'google',
+    'apple',
+    'unified',
+  ] as const;
+
   static readonly PLATFORM_NAMES: Record<Platform, string> = {
     microsoft: 'Microsoft 365',
     google: 'Google Workspace',
     apple: 'Apple Services',
-    unified: 'Unified PIM'
+    unified: 'Unified PIM',
   };
 
   static readonly PLATFORM_COLORS: Record<Platform, string> = {
     microsoft: '#0078D4',
     google: '#4285F4',
     apple: '#007AFF',
-    unified: '#6B46C1'
+    unified: '#6B46C1',
   };
 
   /**
@@ -99,7 +104,7 @@ export class PlatformPriority {
       microsoft: 100,
       google: 80,
       apple: 60,
-      unified: 40
+      unified: 40,
     });
   }
 
@@ -111,7 +116,7 @@ export class PlatformPriority {
       microsoft: 70,
       google: 60,
       apple: 50,
-      unified: 40
+      unified: 40,
     };
 
     // Boost primary platform
@@ -171,32 +176,148 @@ export class PlatformCapabilityMatrix {
   private static readonly capabilities: Record<Platform, PlatformCapabilities> = {
     microsoft: {
       email: { read: true, send: true, search: true, attachments: true, categories: true },
-      calendar: { read: true, create: true, update: true, delete: true, recurrence: true, reminders: true, freebusy: true },
-      contacts: { read: true, create: true, update: true, delete: true, search: true, photos: true },
-      tasks: { read: true, create: true, update: true, delete: true, subtasks: false, reminders: true },
-      files: { read: true, upload: true, download: true, delete: true, share: true, versions: true }
+      calendar: {
+        read: true,
+        create: true,
+        update: true,
+        delete: true,
+        recurrence: true,
+        reminders: true,
+        freebusy: true,
+      },
+      contacts: {
+        read: true,
+        create: true,
+        update: true,
+        delete: true,
+        search: true,
+        photos: true,
+      },
+      tasks: {
+        read: true,
+        create: true,
+        update: true,
+        delete: true,
+        subtasks: false,
+        reminders: true,
+      },
+      files: {
+        read: true,
+        upload: true,
+        download: true,
+        delete: true,
+        share: true,
+        versions: true,
+      },
     },
     google: {
       email: { read: true, send: true, search: true, attachments: true, categories: true },
-      calendar: { read: true, create: true, update: true, delete: true, recurrence: true, reminders: true, freebusy: true },
-      contacts: { read: true, create: true, update: true, delete: true, search: true, photos: true },
-      tasks: { read: true, create: true, update: true, delete: true, subtasks: true, reminders: true },
-      files: { read: true, upload: true, download: true, delete: true, share: true, versions: true }
+      calendar: {
+        read: true,
+        create: true,
+        update: true,
+        delete: true,
+        recurrence: true,
+        reminders: true,
+        freebusy: true,
+      },
+      contacts: {
+        read: true,
+        create: true,
+        update: true,
+        delete: true,
+        search: true,
+        photos: true,
+      },
+      tasks: {
+        read: true,
+        create: true,
+        update: true,
+        delete: true,
+        subtasks: true,
+        reminders: true,
+      },
+      files: {
+        read: true,
+        upload: true,
+        download: true,
+        delete: true,
+        share: true,
+        versions: true,
+      },
     },
     apple: {
       email: { read: true, send: true, search: true, attachments: true, categories: false },
-      calendar: { read: true, create: true, update: true, delete: true, recurrence: true, reminders: true, freebusy: false },
-      contacts: { read: true, create: true, update: true, delete: true, search: true, photos: true },
-      tasks: { read: false, create: false, update: false, delete: false, subtasks: false, reminders: false },
-      files: { read: true, upload: true, download: true, delete: true, share: true, versions: false }
+      calendar: {
+        read: true,
+        create: true,
+        update: true,
+        delete: true,
+        recurrence: true,
+        reminders: true,
+        freebusy: false,
+      },
+      contacts: {
+        read: true,
+        create: true,
+        update: true,
+        delete: true,
+        search: true,
+        photos: true,
+      },
+      tasks: {
+        read: false,
+        create: false,
+        update: false,
+        delete: false,
+        subtasks: false,
+        reminders: false,
+      },
+      files: {
+        read: true,
+        upload: true,
+        download: true,
+        delete: true,
+        share: true,
+        versions: false,
+      },
     },
     unified: {
       email: { read: true, send: true, search: true, attachments: true, categories: true },
-      calendar: { read: true, create: true, update: true, delete: true, recurrence: true, reminders: true, freebusy: true },
-      contacts: { read: true, create: true, update: true, delete: true, search: true, photos: true },
-      tasks: { read: true, create: true, update: true, delete: true, subtasks: true, reminders: true },
-      files: { read: true, upload: true, download: true, delete: true, share: true, versions: true }
-    }
+      calendar: {
+        read: true,
+        create: true,
+        update: true,
+        delete: true,
+        recurrence: true,
+        reminders: true,
+        freebusy: true,
+      },
+      contacts: {
+        read: true,
+        create: true,
+        update: true,
+        delete: true,
+        search: true,
+        photos: true,
+      },
+      tasks: {
+        read: true,
+        create: true,
+        update: true,
+        delete: true,
+        subtasks: true,
+        reminders: true,
+      },
+      files: {
+        read: true,
+        upload: true,
+        download: true,
+        delete: true,
+        share: true,
+        versions: true,
+      },
+    },
   };
 
   /**
@@ -209,7 +330,11 @@ export class PlatformCapabilityMatrix {
   /**
    * Checks if a platform supports a specific capability
    */
-  static hasCapability(platform: Platform, domain: keyof PlatformCapabilities, capability: string): boolean {
+  static hasCapability(
+    platform: Platform,
+    domain: keyof PlatformCapabilities,
+    capability: string
+  ): boolean {
     const platformCaps = this.capabilities[platform];
     const domainCaps = platformCaps[domain] as Record<string, boolean>;
     return domainCaps[capability] ?? false;
@@ -218,7 +343,10 @@ export class PlatformCapabilityMatrix {
   /**
    * Gets platforms that support a specific capability
    */
-  static getPlatformsWithCapability(domain: keyof PlatformCapabilities, capability: string): Platform[] {
+  static getPlatformsWithCapability(
+    domain: keyof PlatformCapabilities,
+    capability: string
+  ): Platform[] {
     return PlatformConfig.SUPPORTED_PLATFORMS.filter(platform =>
       this.hasCapability(platform, domain, capability)
     );
@@ -227,10 +355,16 @@ export class PlatformCapabilityMatrix {
   /**
    * Gets the best platform for a specific operation
    */
-  static getBestPlatformFor(domain: keyof PlatformCapabilities, capability: string, availablePlatforms: Platform[], priority: PlatformPriority): Platform | undefined {
-    const capablePlatforms = this.getPlatformsWithCapability(domain, capability)
-      .filter(platform => availablePlatforms.includes(platform));
-    
+  static getBestPlatformFor(
+    domain: keyof PlatformCapabilities,
+    capability: string,
+    availablePlatforms: Platform[],
+    priority: PlatformPriority
+  ): Platform | undefined {
+    const capablePlatforms = this.getPlatformsWithCapability(domain, capability).filter(platform =>
+      availablePlatforms.includes(platform)
+    );
+
     return priority.getHighestPriority(capablePlatforms);
   }
 }

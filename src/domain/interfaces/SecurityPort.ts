@@ -72,25 +72,34 @@ export interface OAuthConfig {
  */
 export interface TokenManagerPort {
   // Token storage operations
-  storeToken(platform: Platform, tokenType: TokenType, token: string, expiresAt?: Date): Promise<void>;
+  storeToken(
+    platform: Platform,
+    tokenType: TokenType,
+    token: string,
+    expiresAt?: Date
+  ): Promise<void>;
   getToken(platform: Platform, tokenType: TokenType): Promise<string | null>;
   removeToken(platform: Platform, tokenType: TokenType): Promise<boolean>;
   removeAllTokens(platform: Platform): Promise<void>;
-  
+
   // Token validation
   isTokenValid(platform: Platform, tokenType: TokenType): Promise<boolean>;
   getTokenExpiry(platform: Platform, tokenType: TokenType): Promise<Date | null>;
   isTokenExpired(platform: Platform, tokenType: TokenType): Promise<boolean>;
-  isTokenExpiringSoon(platform: Platform, tokenType: TokenType, bufferMinutes?: number): Promise<boolean>;
-  
+  isTokenExpiringSoon(
+    platform: Platform,
+    tokenType: TokenType,
+    bufferMinutes?: number
+  ): Promise<boolean>;
+
   // Token refresh
   refreshToken(platform: Platform): Promise<boolean>;
   refreshTokenIfNeeded(platform: Platform, bufferMinutes?: number): Promise<boolean>;
-  
+
   // Token information
   getTokenInfo(platform: Platform, tokenType: TokenType): Promise<TokenStorageEntry | null>;
   listTokens(platform?: Platform): Promise<TokenStorageEntry[]>;
-  
+
   // Health and maintenance
   cleanupExpiredTokens(): Promise<number>;
   getStats(): Promise<{
@@ -108,11 +117,11 @@ export interface EncryptionPort {
   // Basic encryption/decryption
   encrypt(plaintext: string): Promise<string>;
   decrypt(ciphertext: string): Promise<string>;
-  
+
   // Binary data encryption
   encryptBuffer(buffer: Buffer): Promise<Buffer>;
   decryptBuffer(buffer: Buffer): Promise<Buffer>;
-  
+
   // Key management
   rotateKey(): Promise<void>;
   getKeyInfo(): Promise<{
@@ -121,15 +130,15 @@ export interface EncryptionPort {
     createdAt: Date;
     rotatedAt?: Date;
   }>;
-  
+
   // Hashing
   hash(data: string): Promise<string>;
   verifyHash(data: string, hash: string): Promise<boolean>;
-  
+
   // Digital signatures
   sign(data: string): Promise<string>;
   verifySignature(data: string, signature: string): Promise<boolean>;
-  
+
   // Random generation
   generateSecureRandom(length: number): Promise<string>;
   generateUUID(): Promise<string>;
@@ -144,22 +153,22 @@ export interface EncryptedStoragePort {
   get<T>(key: string): Promise<T | null>;
   delete(key: string): Promise<boolean>;
   exists(key: string): Promise<boolean>;
-  
+
   // Batch operations
   setMany(entries: Record<string, any>): Promise<void>;
   getMany<T>(keys: string[]): Promise<(T | null)[]>;
   deleteMany(keys: string[]): Promise<number>;
-  
+
   // Metadata
   keys(pattern?: string): Promise<string[]>;
   clear(): Promise<void>;
   size(): Promise<number>;
-  
+
   // Security
   backup(path: string): Promise<void>;
   restore(path: string): Promise<void>;
   verifyIntegrity(): Promise<boolean>;
-  
+
   // Lifecycle
   initialize(): Promise<void>;
   close(): Promise<void>;
@@ -170,19 +179,22 @@ export interface EncryptedStoragePort {
  */
 export interface AuthenticationManagerPort {
   // Authentication flow
-  initiateAuth(platform: Platform, config: OAuthConfig): Promise<{
+  initiateAuth(
+    platform: Platform,
+    config: OAuthConfig
+  ): Promise<{
     authUrl: string;
     state: string;
     codeVerifier?: string;
   }>;
-  
+
   handleCallback(
     platform: Platform,
     code: string,
     state: string,
     codeVerifier?: string
   ): Promise<AuthContext>;
-  
+
   // Token exchange
   exchangeCodeForTokens(
     platform: Platform,
@@ -197,15 +209,15 @@ export interface AuthenticationManagerPort {
     tokenType?: string;
     scope?: string;
   }>;
-  
+
   // Authentication status
   isAuthenticated(platform: Platform): Promise<boolean>;
   getAuthContext(platform: Platform): Promise<AuthContext | null>;
-  
+
   // Logout
   logout(platform: Platform): Promise<void>;
   logoutAll(): Promise<void>;
-  
+
   // User information
   getUserInfo(platform: Platform): Promise<{
     id?: string;
@@ -214,7 +226,7 @@ export interface AuthenticationManagerPort {
     picture?: string;
     metadata?: Record<string, any>;
   } | null>;
-  
+
   // Scope management
   hasScope(platform: Platform, scope: string): Promise<boolean>;
   getScopes(platform: Platform): Promise<string[]>;
@@ -226,16 +238,12 @@ export interface AuthenticationManagerPort {
  */
 export interface AccessControlPort {
   // Permission checking
-  hasPermission(
-    context: AuthContext,
-    resource: string,
-    action: string
-  ): Promise<boolean>;
-  
+  hasPermission(context: AuthContext, resource: string, action: string): Promise<boolean>;
+
   // Role-based access control
   hasRole(context: AuthContext, role: string): Promise<boolean>;
   getRoles(context: AuthContext): Promise<string[]>;
-  
+
   // Resource access
   canAccessResource(
     context: AuthContext,
@@ -243,7 +251,7 @@ export interface AccessControlPort {
     resourceId: string,
     action: 'read' | 'write' | 'delete' | 'share'
   ): Promise<boolean>;
-  
+
   // Audit logging
   logAccess(
     context: AuthContext,
@@ -252,7 +260,7 @@ export interface AccessControlPort {
     success: boolean,
     metadata?: Record<string, any>
   ): Promise<void>;
-  
+
   // Security policies
   enforcePolicy(
     context: AuthContext,
@@ -281,7 +289,7 @@ export interface SecurityAuditPort {
     metadata?: Record<string, any>;
     timestamp?: Date;
   }): Promise<void>;
-  
+
   // Query audit logs
   queryLogs(criteria: {
     type?: string[];
@@ -292,19 +300,21 @@ export interface SecurityAuditPort {
     success?: boolean;
     limit?: number;
     offset?: number;
-  }): Promise<Array<{
-    id: string;
-    type: string;
-    action: string;
-    userId?: string;
-    platform?: Platform;
-    resource?: string;
-    success: boolean;
-    error?: string;
-    metadata?: Record<string, any>;
-    timestamp: Date;
-  }>>;
-  
+  }): Promise<
+    Array<{
+      id: string;
+      type: string;
+      action: string;
+      userId?: string;
+      platform?: Platform;
+      resource?: string;
+      success: boolean;
+      error?: string;
+      metadata?: Record<string, any>;
+      timestamp: Date;
+    }>
+  >;
+
   // Security reports
   generateSecurityReport(options: {
     dateRange: { start: Date; end: Date };
@@ -322,18 +332,27 @@ export interface SecurityAuditPort {
     };
     details?: any[];
   }>;
-  
+
   // Anomaly detection
-  detectAnomalies(userId?: string, platform?: Platform): Promise<Array<{
-    type: 'unusual_access_time' | 'unusual_location' | 'excessive_requests' | 'permission_escalation';
-    description: string;
-    severity: 'low' | 'medium' | 'high' | 'critical';
-    userId?: string;
-    platform?: Platform;
-    timestamp: Date;
-    metadata?: Record<string, any>;
-  }>>;
-  
+  detectAnomalies(
+    userId?: string,
+    platform?: Platform
+  ): Promise<
+    Array<{
+      type:
+        | 'unusual_access_time'
+        | 'unusual_location'
+        | 'excessive_requests'
+        | 'permission_escalation';
+      description: string;
+      severity: 'low' | 'medium' | 'high' | 'critical';
+      userId?: string;
+      platform?: Platform;
+      timestamp: Date;
+      metadata?: Record<string, any>;
+    }>
+  >;
+
   // Compliance
   getComplianceStatus(): Promise<{
     dataRetentionCompliant: boolean;
@@ -353,34 +372,34 @@ export interface SecurityConfig {
     keyRotationInterval?: number; // days
     keyDerivationIterations?: number;
   };
-  
+
   tokenStorage: {
     storageType: 'file' | 'registry' | 'keyring';
     storagePath?: string;
     encryptionEnabled: boolean;
   };
-  
+
   authentication: {
     tokenRefreshBuffer: number; // minutes
     maxTokenAge: number; // hours
     requireMFA?: boolean;
     allowedAuthMethods: ('oauth2' | 'api_key' | 'basic')[];
   };
-  
+
   accessControl: {
     defaultDenyAll: boolean;
     roleBasedAccess: boolean;
     resourceBasedAccess: boolean;
     sessionTimeout: number; // minutes
   };
-  
+
   audit: {
     enabled: boolean;
     retentionPeriod: number; // days
     logLevel: 'minimal' | 'standard' | 'detailed';
     realTimeAlerts: boolean;
   };
-  
+
   compliance: {
     gdprCompliance: boolean;
     hipaaCompliance: boolean;
@@ -403,7 +422,7 @@ export enum SecurityErrorType {
   STORAGE_ACCESS_DENIED = 'STORAGE_ACCESS_DENIED',
   POLICY_VIOLATION = 'POLICY_VIOLATION',
   AUDIT_FAILURE = 'AUDIT_FAILURE',
-  UNKNOWN_SECURITY_ERROR = 'UNKNOWN_SECURITY_ERROR'
+  UNKNOWN_SECURITY_ERROR = 'UNKNOWN_SECURITY_ERROR',
 }
 
 /**

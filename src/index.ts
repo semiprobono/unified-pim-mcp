@@ -24,8 +24,8 @@ import { ResilienceManager } from './shared/resilience/ResilienceManager.js';
 
 /**
  * Unified PIM MCP Server Entry Point
- * 
- * This server provides comprehensive CRUD operations for email, calendar, 
+ *
+ * This server provides comprehensive CRUD operations for email, calendar,
  * contacts, tasks, and files across Microsoft, Google, and Apple platforms.
  */
 class UnifiedPIMMain {
@@ -47,21 +47,20 @@ class UnifiedPIMMain {
     try {
       // Initialize core services
       await this.initializeServices();
-      
+
       // Create and configure MCP server
       await this.createMCPServer();
-      
+
       // Setup signal handlers
       this.setupSignalHandlers();
-      
+
       // Start health monitoring
       await this.startHealthMonitoring();
-      
+
       // Start the server
       await this.startServer();
-      
+
       this.logger?.info('Unified PIM MCP Server started successfully');
-      
     } catch (error) {
       const logger = this.logger || console;
       logger.error('Failed to start Unified PIM MCP Server:', error);
@@ -99,10 +98,7 @@ class UnifiedPIMMain {
     await this.resilienceManager.initialize();
 
     // Cache Manager
-    this.cacheManager = new CacheManager(
-      this.configManager.getConfig('cache'),
-      this.logger
-    );
+    this.cacheManager = new CacheManager(this.configManager.getConfig('cache'), this.logger);
     await this.cacheManager.initialize();
 
     // Platform Adapter Manager
@@ -121,7 +117,7 @@ class UnifiedPIMMain {
       {
         platformManager: this.platformManager,
         cacheManager: this.cacheManager,
-        securityManager: this.securityManager
+        securityManager: this.securityManager,
       },
       this.logger
     );
@@ -133,8 +129,14 @@ class UnifiedPIMMain {
    * Create and configure the MCP server
    */
   private async createMCPServer(): Promise<void> {
-    if (!this.configManager || !this.logger || !this.errorHandler || 
-        !this.platformManager || !this.cacheManager || !this.securityManager) {
+    if (
+      !this.configManager ||
+      !this.logger ||
+      !this.errorHandler ||
+      !this.platformManager ||
+      !this.cacheManager ||
+      !this.securityManager
+    ) {
       throw new Error('Services not initialized');
     }
 
@@ -187,18 +189,18 @@ class UnifiedPIMMain {
     });
 
     // Call tool handler
-    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
+    this.server.setRequestHandler(CallToolRequestSchema, async request => {
       try {
         const { name, arguments: args } = request.params;
         const result = await this.pimServer!.executeTool(name, args || {});
         return result;
       } catch (error) {
         this.logger?.error(`Failed to execute tool ${request.params.name}:`, error);
-        
+
         if (error instanceof McpError) {
           throw error;
         }
-        
+
         throw new McpError(
           ErrorCode.InternalError,
           `Failed to execute tool: ${error instanceof Error ? error.message : 'Unknown error'}`
@@ -218,18 +220,18 @@ class UnifiedPIMMain {
     });
 
     // Read resource handler
-    this.server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+    this.server.setRequestHandler(ReadResourceRequestSchema, async request => {
       try {
         const { uri } = request.params;
         const contents = await this.pimServer!.readResource(uri);
         return { contents };
       } catch (error) {
         this.logger?.error(`Failed to read resource ${request.params.uri}:`, error);
-        
+
         if (error instanceof McpError) {
           throw error;
         }
-        
+
         throw new McpError(
           ErrorCode.InternalError,
           `Failed to read resource: ${error instanceof Error ? error.message : 'Unknown error'}`
@@ -260,7 +262,7 @@ class UnifiedPIMMain {
   private setupSignalHandlers(): void {
     const gracefulShutdown = async (signal: string) => {
       this.logger?.info(`Received ${signal}, starting graceful shutdown...`);
-      
+
       try {
         // Stop health monitoring
         if (this.healthMonitor) {
@@ -304,7 +306,7 @@ class UnifiedPIMMain {
     process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 
     // Handle uncaught exceptions
-    process.on('uncaughtException', (error) => {
+    process.on('uncaughtException', error => {
       this.logger?.error('Uncaught exception:', error);
       gracefulShutdown('uncaughtException');
     });
@@ -328,7 +330,7 @@ class UnifiedPIMMain {
     await this.healthMonitor.start();
 
     // Log health status periodically
-    this.healthMonitor.on('healthCheck', (status) => {
+    this.healthMonitor.on('healthCheck', status => {
       if (status.isHealthy) {
         this.logger?.debug('Health check passed', status);
       } else {
@@ -350,7 +352,7 @@ async function startServer(): Promise<void> {
 
 // Start the server if this file is run directly
 if (import.meta.url === `file://${process.argv[1]}`) {
-  startServer().catch((error) => {
+  startServer().catch(error => {
     console.error('Fatal error:', error);
     process.exit(1);
   });

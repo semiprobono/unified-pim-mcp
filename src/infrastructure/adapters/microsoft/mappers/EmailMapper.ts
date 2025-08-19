@@ -1,8 +1,11 @@
-import { Email, EmailEntity, EmailBody, Attachment } from '../../../../domain/entities/Email.js';
+import { Attachment, Email, EmailBody, EmailEntity } from '../../../../domain/entities/Email.js';
 import { EmailAddress } from '../../../../domain/value-objects/EmailAddress.js';
 import { UnifiedId } from '../../../../domain/value-objects/UnifiedId.js';
 import { Platform } from '../../../../domain/value-objects/Platform.js';
-import { EmailMetadata } from '../../../../domain/value-objects/EmailMetadata.js';
+import {
+  EmailMetadata,
+  EmailMetadataImpl,
+} from '../../../../domain/value-objects/EmailMetadata.js';
 
 /**
  * Maps between Microsoft Graph email format and domain Email entity
@@ -11,19 +14,21 @@ export class EmailMapper {
   /**
    * Transforms Graph API response to domain Email entity
    */
-  static toDomainEmail(graphEmail: any): Email {
+  static toDomainEmail(graphEmail: any, userEmail?: string): Email {
     // Extract email addresses
     const from = this.toEmailAddress(graphEmail.from?.emailAddress);
     const to = this.toEmailAddresses(graphEmail.toRecipients || []);
     const cc = graphEmail.ccRecipients ? this.toEmailAddresses(graphEmail.ccRecipients) : undefined;
-    const bcc = graphEmail.bccRecipients ? this.toEmailAddresses(graphEmail.bccRecipients) : undefined;
+    const bcc = graphEmail.bccRecipients
+      ? this.toEmailAddresses(graphEmail.bccRecipients)
+      : undefined;
     const replyTo = graphEmail.replyTo ? this.toEmailAddresses(graphEmail.replyTo) : undefined;
 
     // Extract body
     const body: EmailBody = {
       content: graphEmail.body?.content || '',
       contentType: graphEmail.body?.contentType === 'html' ? 'html' : 'text',
-      preview: graphEmail.bodyPreview || undefined
+      preview: graphEmail.bodyPreview || undefined,
     };
 
     // Extract attachments
@@ -34,7 +39,7 @@ export class EmailMapper {
       size: att.size,
       contentBytes: att.contentBytes,
       downloadUrl: att['@odata.mediaContentType'] ? undefined : att['@microsoft.graph.downloadUrl'],
-      isInline: att.isInline || false
+      isInline: att.isInline || false,
     }));
 
     // Map importance
@@ -44,26 +49,16 @@ export class EmailMapper {
     const unifiedId = UnifiedId.fromString(`microsoft_email_${graphEmail.id}`);
 
     // Create platform IDs map
-    const platformIds = new Map<string, string>();
+    const platformIds = new Map<Platform, string>();
     platformIds.set('microsoft', graphEmail.id);
 
-    // Create metadata
-    const metadata = {
-      platform: 'microsoft',
-      originalId: graphEmail.id,
-      syncedAt: new Date(),
-      version: graphEmail['@odata.etag'] || '1',
-      rawData: {
-        conversationId: graphEmail.conversationId,
-        conversationIndex: graphEmail.conversationIndex,
-        internetMessageId: graphEmail.internetMessageId,
-        internetMessageHeaders: graphEmail.internetMessageHeaders,
-        isDeliveryReceiptRequested: graphEmail.isDeliveryReceiptRequested,
-        isReadReceiptRequested: graphEmail.isReadReceiptRequested,
-        changeKey: graphEmail.changeKey,
-        webLink: graphEmail.webLink
-      }
-    } as EmailMetadata;
+    // Create metadata with all required properties
+    const metadata = EmailMetadataImpl.createMinimal(
+      'microsoft',
+      graphEmail.internetMessageId || graphEmail.id,
+      Number(graphEmail.bodyPreview?.length || 0),
+      userEmail ? graphEmail.from?.emailAddress?.address === userEmail : false
+    );
 
     return new EmailEntity(
       unifiedId,
@@ -95,18 +90,32 @@ export class EmailMapper {
     const graphEmail: any = {
       message: {
         subject: domainEmail.subject,
-        body: domainEmail.body ? {
-          contentType: domainEmail.body.contentType === 'html' ? 'HTML' : 'Text',
-          content: domainEmail.body.content
-        } : undefined,
-        toRecipients: domainEmail.to ? domainEmail.to.map(addr => this.toGraphEmailAddress(addr)) : [],
-        ccRecipients: domainEmail.cc ? domainEmail.cc.map(addr => this.toGraphEmailAddress(addr)) : undefined,
-        bccRecipients: domainEmail.bcc ? domainEmail.bcc.map(addr => this.toGraphEmailAddress(addr)) : undefined,
-        replyTo: domainEmail.replyTo ? domainEmail.replyTo.map(addr => this.toGraphEmailAddress(addr)) : undefined,
-        importance: domainEmail.importance ? this.mapImportanceToGraph(domainEmail.importance) : 'normal',
+        body: domainEmail.body
+          ? {
+              contentType: domainEmail.body.contentType === 'html' ? 'HTML' : 'Text',
+              content: domainEmail.body.content,
+            }
+          : undefined,
+        toRecipients: domainEmail.to
+          ? domainEmail.to.map(addr => this.toGraphEmailAddress(addr))
+          : [],
+        ccRecipients: domainEmail.cc
+          ? domainEmail.cc.map(addr => this.toGraphEmailAddress(addr))
+          : undefined,
+        bccRecipients: domainEmail.bcc
+          ? domainEmail.bcc.map(addr => this.toGraphEmailAddress(addr))
+          : undefined,
+        replyTo: domainEmail.replyTo
+          ? domainEmail.replyTo.map(addr => this.toGraphEmailAddress(addr))
+          : undefined,
+        importance: domainEmail.importance
+          ? this.mapImportanceToGraph(domainEmail.importance)
+          : 'normal',
         categories: domainEmail.categories,
-        attachments: domainEmail.attachments ? domainEmail.attachments.map(att => this.toGraphAttachment(att)) : undefined
-      }
+        attachments: domainEmail.attachments
+          ? domainEmail.attachments.map(att => this.toGraphAttachment(att))
+          : undefined,
+      },
     };
 
     // Add save to sent items flag if not a draft
@@ -144,8 +153,8 @@ export class EmailMapper {
     return {
       emailAddress: {
         address: emailAddress.address,
-        name: emailAddress.displayName
-      }
+        name: emailAddress.displayName,
+      },
     };
   }
 
@@ -160,7 +169,7 @@ export class EmailMapper {
         name: attachment.name,
         contentType: attachment.contentType,
         contentBytes: attachment.contentBytes,
-        isInline: attachment.isInline
+        isInline: attachment.isInline,
       };
     } else if (attachment.downloadUrl) {
       // Reference attachment
@@ -170,7 +179,7 @@ export class EmailMapper {
         contentType: attachment.contentType,
         size: attachment.size,
         isInline: attachment.isInline,
-        sourceUrl: attachment.downloadUrl
+        sourceUrl: attachment.downloadUrl,
       };
     }
     return null;
@@ -236,7 +245,7 @@ export class EmailMapper {
     if (updates.body !== undefined) {
       graphUpdate.body = {
         contentType: updates.body.contentType === 'html' ? 'HTML' : 'Text',
-        content: updates.body.content
+        content: updates.body.content,
       };
     }
 

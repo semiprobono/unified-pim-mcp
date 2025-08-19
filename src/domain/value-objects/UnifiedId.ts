@@ -15,7 +15,7 @@ export class UnifiedId {
   ) {
     const id = _uuid || uuidv4();
     this.value = `${_platform}_${_entityType}_${id}`;
-    
+
     // Validate format
     if (!this.isValid(this.value)) {
       throw new Error(`Invalid UnifiedId format: ${this.value}`);
@@ -30,11 +30,11 @@ export class UnifiedId {
     if (parts.length < 3) {
       throw new Error(`Invalid UnifiedId format: ${value}`);
     }
-    
+
     const platform = parts[0];
     const entityType = parts[1];
     const uuid = parts.slice(2).join('_'); // Handle UUIDs with underscores
-    
+
     return new UnifiedId(platform, entityType, uuid);
   }
 
@@ -124,7 +124,7 @@ export class UnifiedId {
     let hash = 0;
     for (let i = 0; i < this.value.length; i++) {
       const char = this.value.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
+      hash = (hash << 5) - hash + char;
       hash = hash & hash; // Convert to 32-bit integer
     }
     return hash;

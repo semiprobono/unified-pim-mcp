@@ -35,7 +35,15 @@ export interface ShareLink {
 
 export interface FileActivity {
   id: string;
-  action: 'created' | 'modified' | 'deleted' | 'restored' | 'moved' | 'copied' | 'shared' | 'downloaded';
+  action:
+    | 'created'
+    | 'modified'
+    | 'deleted'
+    | 'restored'
+    | 'moved'
+    | 'copied'
+    | 'shared'
+    | 'downloaded';
   actor: string;
   timestamp: Date;
   details?: Record<string, any>;
@@ -129,37 +137,74 @@ export class FileEntity implements File {
    */
   get fileType(): 'document' | 'image' | 'video' | 'audio' | 'archive' | 'code' | 'other' {
     const ext = this.extension;
-    
+
     // Document types
-    if (['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'rtf', 'odt', 'ods', 'odp'].includes(ext)) {
+    if (
+      [
+        'pdf',
+        'doc',
+        'docx',
+        'xls',
+        'xlsx',
+        'ppt',
+        'pptx',
+        'txt',
+        'rtf',
+        'odt',
+        'ods',
+        'odp',
+      ].includes(ext)
+    ) {
       return 'document';
     }
-    
+
     // Image types
     if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp', 'tiff', 'ico'].includes(ext)) {
       return 'image';
     }
-    
+
     // Video types
     if (['mp4', 'avi', 'mkv', 'mov', 'wmv', 'flv', 'webm', 'm4v'].includes(ext)) {
       return 'video';
     }
-    
+
     // Audio types
     if (['mp3', 'wav', 'flac', 'aac', 'm4a', 'ogg', 'wma'].includes(ext)) {
       return 'audio';
     }
-    
+
     // Archive types
     if (['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz'].includes(ext)) {
       return 'archive';
     }
-    
+
     // Code types
-    if (['js', 'ts', 'py', 'java', 'c', 'cpp', 'cs', 'php', 'rb', 'go', 'rs', 'swift', 'kt', 'html', 'css', 'json', 'xml', 'yaml', 'yml'].includes(ext)) {
+    if (
+      [
+        'js',
+        'ts',
+        'py',
+        'java',
+        'c',
+        'cpp',
+        'cs',
+        'php',
+        'rb',
+        'go',
+        'rs',
+        'swift',
+        'kt',
+        'html',
+        'css',
+        'json',
+        'xml',
+        'yaml',
+        'yml',
+      ].includes(ext)
+    ) {
       return 'code';
     }
-    
+
     return 'other';
   }
 
@@ -170,12 +215,12 @@ export class FileEntity implements File {
     const units = ['B', 'KB', 'MB', 'GB', 'TB'];
     let size = this.size;
     let unitIndex = 0;
-    
+
     while (size >= 1024 && unitIndex < units.length - 1) {
       size /= 1024;
       unitIndex++;
     }
-    
+
     return `${size.toFixed(unitIndex > 0 ? 1 : 0)} ${units[unitIndex]}`;
   }
 
@@ -183,7 +228,9 @@ export class FileEntity implements File {
    * Gets the latest version
    */
   get latestVersion(): FileVersion {
-    return this.versions.sort((a, b) => b.lastModifiedDateTime.getTime() - a.lastModifiedDateTime.getTime())[0];
+    return this.versions.sort(
+      (a, b) => b.lastModifiedDateTime.getTime() - a.lastModifiedDateTime.getTime()
+    )[0];
   }
 
   /**
@@ -198,9 +245,7 @@ export class FileEntity implements File {
    */
   get hasActiveShareLinks(): boolean {
     const now = new Date();
-    return this.shareLinks.some(link => 
-      !link.expirationDateTime || link.expirationDateTime > now
-    );
+    return this.shareLinks.some(link => !link.expirationDateTime || link.expirationDateTime > now);
   }
 
   /**
@@ -246,13 +291,16 @@ export class FileEntity implements File {
       this.versions,
       this.permissions,
       this.shareLinks,
-      [...this.activities, {
-        id: `activity_${Date.now()}`,
-        action: 'moved',
-        actor: 'system',
-        timestamp: new Date(),
-        details: { oldPath: this.path, newPath, oldParentId: this.parentId, newParentId }
-      }],
+      [
+        ...this.activities,
+        {
+          id: `activity_${Date.now()}`,
+          action: 'moved',
+          actor: 'system',
+          timestamp: new Date(),
+          details: { oldPath: this.path, newPath, oldParentId: this.parentId, newParentId },
+        },
+      ],
       this.isDeleted,
       this.metadata,
       newParentId,
@@ -275,7 +323,7 @@ export class FileEntity implements File {
    */
   rename(newName: string): FileEntity {
     const newDisplayName = this.displayName === this.name ? newName : this.displayName;
-    
+
     return new FileEntity(
       this.id,
       this.platformIds,
@@ -292,13 +340,16 @@ export class FileEntity implements File {
       this.versions,
       this.permissions,
       this.shareLinks,
-      [...this.activities, {
-        id: `activity_${Date.now()}`,
-        action: 'modified',
-        actor: 'system',
-        timestamp: new Date(),
-        details: { oldName: this.name, newName, action: 'rename' }
-      }],
+      [
+        ...this.activities,
+        {
+          id: `activity_${Date.now()}`,
+          action: 'modified',
+          actor: 'system',
+          timestamp: new Date(),
+          details: { oldName: this.name, newName, action: 'rename' },
+        },
+      ],
       this.isDeleted,
       this.metadata,
       this.parentId,
@@ -321,7 +372,7 @@ export class FileEntity implements File {
    */
   addTags(newTags: string[]): FileEntity {
     const updatedTags = [...new Set([...this.tags, ...newTags])];
-    
+
     return new FileEntity(
       this.id,
       this.platformIds,
@@ -367,11 +418,11 @@ export class FileEntity implements File {
       expirationDateTime,
       requiresSignIn: false,
       createdDateTime: new Date(),
-      createdBy: 'system'
+      createdBy: 'system',
     };
 
     const updatedShareLinks = [...this.shareLinks, newShareLink];
-    
+
     return new FileEntity(
       this.id,
       this.platformIds,
@@ -388,13 +439,16 @@ export class FileEntity implements File {
       this.versions,
       this.permissions,
       updatedShareLinks,
-      [...this.activities, {
-        id: `activity_${Date.now()}`,
-        action: 'shared',
-        actor: 'system',
-        timestamp: new Date(),
-        details: { shareType: type, linkId: newShareLink.id }
-      }],
+      [
+        ...this.activities,
+        {
+          id: `activity_${Date.now()}`,
+          action: 'shared',
+          actor: 'system',
+          timestamp: new Date(),
+          details: { shareType: type, linkId: newShareLink.id },
+        },
+      ],
       this.isDeleted,
       this.metadata,
       this.parentId,
@@ -432,13 +486,16 @@ export class FileEntity implements File {
       this.versions,
       this.permissions,
       this.shareLinks,
-      [...this.activities, {
-        id: `activity_${Date.now()}`,
-        action: 'deleted',
-        actor: deletedBy,
-        timestamp: new Date(),
-        details: { softDelete: true }
-      }],
+      [
+        ...this.activities,
+        {
+          id: `activity_${Date.now()}`,
+          action: 'deleted',
+          actor: deletedBy,
+          timestamp: new Date(),
+          details: { softDelete: true },
+        },
+      ],
       true, // Mark as deleted
       this.metadata,
       this.parentId,
@@ -476,13 +533,16 @@ export class FileEntity implements File {
       this.versions,
       this.permissions,
       this.shareLinks,
-      [...this.activities, {
-        id: `activity_${Date.now()}`,
-        action: 'restored',
-        actor: 'system',
-        timestamp: new Date(),
-        details: { restoredFrom: 'deleted' }
-      }],
+      [
+        ...this.activities,
+        {
+          id: `activity_${Date.now()}`,
+          action: 'restored',
+          actor: 'system',
+          timestamp: new Date(),
+          details: { restoredFrom: 'deleted' },
+        },
+      ],
       false, // Mark as not deleted
       this.metadata,
       this.parentId,
@@ -572,17 +632,17 @@ export class FileEntity implements File {
       versions: this.versions.map(v => ({
         ...v,
         createdDateTime: v.createdDateTime.toISOString(),
-        lastModifiedDateTime: v.lastModifiedDateTime.toISOString()
+        lastModifiedDateTime: v.lastModifiedDateTime.toISOString(),
       })),
       permissions: this.permissions,
       shareLinks: this.shareLinks.map(link => ({
         ...link,
         createdDateTime: link.createdDateTime.toISOString(),
-        expirationDateTime: link.expirationDateTime?.toISOString()
+        expirationDateTime: link.expirationDateTime?.toISOString(),
       })),
       recentActivities: this.recentActivities.map(activity => ({
         ...activity,
-        timestamp: activity.timestamp.toISOString()
+        timestamp: activity.timestamp.toISOString(),
       })),
       isDeleted: this.isDeleted,
       deletedDateTime: this.deletedDateTime?.toISOString(),
@@ -591,7 +651,7 @@ export class FileEntity implements File {
       hasActiveShareLinks: this.hasActiveShareLinks,
       canPreview: this.canPreview,
       hasThumbnail: this.hasThumbnail,
-      metadata: this.metadata
+      metadata: this.metadata,
     };
   }
 }

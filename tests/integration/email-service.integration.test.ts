@@ -1,15 +1,15 @@
 import { describe, test, expect, beforeAll, afterAll, beforeEach, afterEach } from '@jest/globals';
-import { GraphAdapter } from '../../src/infrastructure/adapters/microsoft/GraphAdapter.js';
-import { EmailService } from '../../src/infrastructure/adapters/microsoft/services/EmailService.js';
-import { GraphClient } from '../../src/infrastructure/adapters/microsoft/clients/GraphClient.js';
-import { SecurityManager } from '../../src/shared/security/SecurityManager.js';
-import { ConfigManager } from '../../src/shared/config/ConfigManager.js';
-import { Logger } from '../../src/shared/logging/Logger.js';
-import { CacheManager } from '../../src/infrastructure/cache/CacheManager.js';
-import { ResilienceManager } from '../../src/shared/resilience/ResilienceManager.js';
-import { testConfig } from './setup.integration.js';
-import { createMockGraphResponse, createMockEmailData } from '../fixtures/graphApiResponses.js';
-import { createMockMsalApp, createMockTokenResponse } from '../mocks/msalMock.js';
+import { GraphAdapter } from '../../src/infrastructure/adapters/microsoft/GraphAdapter';
+import { EmailService } from '../../src/infrastructure/adapters/microsoft/services/EmailService';
+import { GraphClient } from '../../src/infrastructure/adapters/microsoft/clients/GraphClient';
+import { SecurityManager } from '../../src/shared/security/SecurityManager';
+import { ConfigManager } from '../../src/shared/config/ConfigManager';
+import { Logger } from '../../src/shared/logging/Logger';
+import { CacheManager } from '../../src/infrastructure/cache/CacheManager';
+import { ResilienceManager } from '../../src/shared/resilience/ResilienceManager';
+import { testConfig } from './setup.integration';
+import { createMockGraphResponse, createMockEmailData } from '../fixtures/graphApiResponses';
+import { createMockMsalApp, createMockTokenResponse } from '../mocks/msalMock';
 import nock from 'nock';
 
 /**

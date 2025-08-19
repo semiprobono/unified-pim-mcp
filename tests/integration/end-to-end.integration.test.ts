@@ -1,16 +1,16 @@
-import { describe, test, expect, beforeAll, afterAll, beforeEach, afterEach } from '@jest/globals';
-import { UnifiedPIMMain } from '../../src/index.js';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from '@jest/globals';
+import { UnifiedPIMMain } from '../../src/index';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
-import { testConfig } from './setup.integration.js';
-import { createMockMsalApp, createMockTokenResponse } from '../mocks/msalMock.js';
-import { createMockGraphResponse, createMockEmailData } from '../fixtures/graphApiResponses.js';
+import { testConfig } from './setup.integration';
+import { createMockMsalApp, createMockTokenResponse } from '../mocks/msalMock';
+import { createMockEmailData, createMockGraphResponse } from '../fixtures/graphApiResponses';
 import nock from 'nock';
 
 /**
  * End-to-End System Integration Tests
- * 
+ *
  * Tests complete user workflows and system behavior:
  * 1. Full authentication → email operations workflow
  * 2. Multi-user scenarios with token isolation
@@ -23,13 +23,13 @@ import nock from 'nock';
 describe('End-to-End System Integration Tests', () => {
   let pimApp: UnifiedPIMMain;
   let mockServer: any; // Mock MCP client
-  
+
   const mockGraphBaseUrl = 'https://graph.microsoft.com';
 
   beforeAll(async () => {
     // Initialize the full application
     pimApp = new UnifiedPIMMain();
-    
+
     // Setup mock HTTP responses
     setupGraphApiMocks();
   });
@@ -37,7 +37,7 @@ describe('End-to-End System Integration Tests', () => {
   afterAll(async () => {
     // Cleanup
     nock.cleanAll();
-    
+
     // Gracefully shutdown if running
     if (pimApp) {
       // Simulate shutdown signal
@@ -50,7 +50,7 @@ describe('End-to-End System Integration Tests', () => {
     // Reset mocks
     nock.cleanAll();
     setupGraphApiMocks();
-    
+
     // Setup mock client
     mockServer = createMockMCPClient();
   });
@@ -67,14 +67,11 @@ describe('End-to-End System Integration Tests', () => {
       .reply(200, createMockTokenResponse());
 
     // Mock user profile
-    nock(mockGraphBaseUrl)
-      .persist()
-      .get('/v1.0/me')
-      .reply(200, {
-        id: 'test-user-123',
-        displayName: 'Test User',
-        mail: 'test@example.com'
-      });
+    nock(mockGraphBaseUrl).persist().get('/v1.0/me').reply(200, {
+      id: 'test-user-123',
+      displayName: 'Test User',
+      mail: 'test@example.com',
+    });
 
     // Mock email operations
     nock(mockGraphBaseUrl)
@@ -83,7 +80,7 @@ describe('End-to-End System Integration Tests', () => {
       .query(true)
       .reply(200, {
         value: createMockEmailData(10),
-        '@odata.count': 10
+        '@odata.count': 10,
       });
 
     nock(mockGraphBaseUrl)
@@ -91,10 +88,7 @@ describe('End-to-End System Integration Tests', () => {
       .get(/\/v1\.0\/me\/messages\/.*/)
       .reply(200, createMockEmailData(1)[0]);
 
-    nock(mockGraphBaseUrl)
-      .persist()
-      .post('/v1.0/me/sendMail')
-      .reply(202);
+    nock(mockGraphBaseUrl).persist().post('/v1.0/me/sendMail').reply(202);
 
     nock(mockGraphBaseUrl)
       .persist()
@@ -118,24 +112,24 @@ describe('End-to-End System Integration Tests', () => {
         // Simulate MCP tool call
         const request = {
           method: 'tools/call',
-          params: { name, arguments: args }
+          params: { name, arguments: args },
         };
-        
+
         // This would normally go through the MCP transport
         // For testing, we'll call the tool directly
         const tools = await pimApp['pimServer']?.getAvailableTools();
         const tool = tools?.find(t => t.name === name);
-        
+
         if (!tool) {
           throw new Error(`Tool ${name} not found`);
         }
-        
+
         return await pimApp['pimServer']?.executeTool(name, args);
       },
 
       async listTools(): Promise<any> {
         return await pimApp['pimServer']?.getAvailableTools();
-      }
+      },
     };
   }
 
@@ -143,7 +137,7 @@ describe('End-to-End System Integration Tests', () => {
     test('should complete full authentication and email workflow', async () => {
       // Start the application
       const appPromise = pimApp.main();
-      
+
       // Wait for initialization
       await new Promise(resolve => setTimeout(resolve, 2000));
 
@@ -152,11 +146,11 @@ describe('End-to-End System Integration Tests', () => {
         console.log('🔐 Step 1: Starting authentication...');
         const authStart = await mockServer.callTool('pim_auth_start', {
           platform: 'microsoft',
-          userId: 'e2e-test-user'
+          userId: 'e2e-test-user',
         });
 
         expect(authStart.content[0].text).toContain('Authentication URL generated');
-        
+
         // Extract auth URL and state
         const authUrl = authStart.content[0].text.match(/https:\/\/[^\s]+/)[0];
         const state = new URL(authUrl).searchParams.get('state');
@@ -166,7 +160,7 @@ describe('End-to-End System Integration Tests', () => {
         const authCallback = await mockServer.callTool('pim_auth_callback', {
           platform: 'microsoft',
           code: 'e2e-test-auth-code',
-          state: state
+          state,
         });
 
         expect(authCallback.content[0].text).toContain('Successfully authenticated');
@@ -174,7 +168,7 @@ describe('End-to-End System Integration Tests', () => {
         // Step 3: Verify authentication status
         console.log('✅ Step 3: Verifying authentication status...');
         const authStatus = await mockServer.callTool('pim_auth_status', {
-          platform: 'microsoft'
+          platform: 'microsoft',
         });
 
         const status = JSON.parse(authStatus.content[0].text);
@@ -185,7 +179,7 @@ describe('End-to-End System Integration Tests', () => {
         const emailSearch = await mockServer.callTool('pim_email_search', {
           query: 'project meeting',
           platform: 'microsoft',
-          limit: 5
+          limit: 5,
         });
 
         expect(emailSearch.content[0].text).toContain('Email search executed');
@@ -194,7 +188,7 @@ describe('End-to-End System Integration Tests', () => {
         console.log('📨 Step 5: Getting specific email...');
         const emailGet = await mockServer.callTool('pim_email_get', {
           emailId: 'mock-email-12345',
-          platform: 'microsoft'
+          platform: 'microsoft',
         });
 
         expect(emailGet.content[0].text).toContain('Get email mock-email-12345');
@@ -205,7 +199,7 @@ describe('End-to-End System Integration Tests', () => {
           to: ['colleague@company.com'],
           subject: 'E2E Test Email',
           body: 'This email was sent during end-to-end testing',
-          platform: 'microsoft'
+          platform: 'microsoft',
         });
 
         expect(emailSend.content[0].text).toContain('Send email');
@@ -215,7 +209,7 @@ describe('End-to-End System Integration Tests', () => {
         const emailReply = await mockServer.callTool('pim_email_reply', {
           emailId: 'mock-email-12345',
           body: 'Thank you for your email. This is an automated E2E test reply.',
-          platform: 'microsoft'
+          platform: 'microsoft',
         });
 
         expect(emailReply.content[0].text).toContain('Reply to email');
@@ -225,13 +219,12 @@ describe('End-to-End System Integration Tests', () => {
         const emailMarkRead = await mockServer.callTool('pim_email_mark_read', {
           emailId: 'mock-email-12345',
           isRead: true,
-          platform: 'microsoft'
+          platform: 'microsoft',
         });
 
         expect(emailMarkRead.content[0].text).toContain('Mark email');
 
         console.log('🎉 E2E workflow completed successfully!');
-
       } finally {
         // Gracefully shutdown
         process.emit('SIGTERM');
@@ -255,7 +248,7 @@ describe('End-to-End System Integration Tests', () => {
           query: 'quarterly report',
           hasAttachments: true,
           importance: 'high',
-          platform: 'microsoft'
+          platform: 'microsoft',
         });
         expect(searchWithAttachments.content[0].text).toContain('Email search executed');
 
@@ -263,7 +256,7 @@ describe('End-to-End System Integration Tests', () => {
         const searchUnreadFromBoss = await mockServer.callTool('pim_email_search', {
           from: 'boss@company.com',
           isRead: false,
-          platform: 'microsoft'
+          platform: 'microsoft',
         });
         expect(searchUnreadFromBoss.content[0].text).toContain('Email search executed');
 
@@ -272,7 +265,7 @@ describe('End-to-End System Integration Tests', () => {
           query: 'weekly update',
           dateFrom: '2024-11-01T00:00:00Z',
           dateTo: '2024-11-30T23:59:59Z',
-          platform: 'microsoft'
+          platform: 'microsoft',
         });
         expect(searchByDateRange.content[0].text).toContain('Email search executed');
 
@@ -286,7 +279,7 @@ describe('End-to-End System Integration Tests', () => {
           const markRead = await mockServer.callTool('pim_email_mark_read', {
             emailId,
             isRead: true,
-            platform: 'microsoft'
+            platform: 'microsoft',
           });
           expect(markRead.content[0].text).toContain('Mark email');
         }
@@ -298,12 +291,11 @@ describe('End-to-End System Integration Tests', () => {
           subject: 'Weekly Status Update - Workflow Test',
           body: 'This is a follow-up email generated during workflow testing.',
           importance: 'normal',
-          platform: 'microsoft'
+          platform: 'microsoft',
         });
         expect(followUp.content[0].text).toContain('Send email');
 
         console.log('✅ Complex workflow completed successfully!');
-
       } finally {
         process.emit('SIGTERM');
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -327,7 +319,7 @@ describe('End-to-End System Integration Tests', () => {
           location: 'Conference Room A',
           description: 'End-to-end testing meeting with the development team',
           attendees: ['dev1@company.com', 'dev2@company.com'],
-          platform: 'microsoft'
+          platform: 'microsoft',
         });
         expect(createMeeting.content[0].text).toContain('Creating event "E2E Test Meeting"');
 
@@ -336,12 +328,11 @@ describe('End-to-End System Integration Tests', () => {
           to: ['dev1@company.com', 'dev2@company.com'],
           subject: 'Meeting Invitation: E2E Test Meeting',
           body: 'You have been invited to the E2E Test Meeting on December 15th at 10:00 AM.',
-          platform: 'microsoft'
+          platform: 'microsoft',
         });
         expect(meetingEmail.content[0].text).toContain('Send email');
 
         console.log('✅ Calendar workflow completed successfully!');
-
       } finally {
         process.emit('SIGTERM');
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -359,30 +350,32 @@ describe('End-to-End System Integration Tests', () => {
 
         // Simulate 3 concurrent users
         const users = ['user1@company.com', 'user2@company.com', 'user3@company.com'];
-        
+
         const userWorkflows = users.map(async (userId, index) => {
           console.log(`🔐 User ${index + 1} (${userId}) starting authentication...`);
-          
+
           // Each user starts authentication
           const authStart = await mockServer.callTool('pim_auth_start', {
             platform: 'microsoft',
-            userId: userId
+            userId,
           });
           expect(authStart.content[0].text).toContain('Authentication URL generated');
 
           // Complete authentication
-          const state = new URL(authStart.content[0].text.match(/https:\/\/[^\s]+/)[0]).searchParams.get('state');
+          const state = new URL(
+            authStart.content[0].text.match(/https:\/\/[^\s]+/)[0]
+          ).searchParams.get('state');
           const authCallback = await mockServer.callTool('pim_auth_callback', {
             platform: 'microsoft',
             code: `auth-code-${index}`,
-            state: state
+            state,
           });
           expect(authCallback.content[0].text).toContain('Successfully authenticated');
 
           // Each user performs email operations
           const emailSearch = await mockServer.callTool('pim_email_search', {
             query: `emails for ${userId}`,
-            platform: 'microsoft'
+            platform: 'microsoft',
           });
           expect(emailSearch.content[0].text).toContain('Email search executed');
 
@@ -392,9 +385,8 @@ describe('End-to-End System Integration Tests', () => {
 
         const results = await Promise.all(userWorkflows);
         expect(results).toHaveLength(3);
-        
-        console.log('✅ All concurrent users completed successfully!');
 
+        console.log('✅ All concurrent users completed successfully!');
       } finally {
         process.emit('SIGTERM');
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -410,31 +402,30 @@ describe('End-to-End System Integration Tests', () => {
 
         // User 1 workflow
         await authenticateUser('isolated-user-1');
-        
+
         const user1Search = await mockServer.callTool('pim_email_search', {
           query: 'confidential user 1 data',
-          platform: 'microsoft'
+          platform: 'microsoft',
         });
         expect(user1Search.content[0].text).toContain('confidential user 1 data');
 
         // User 2 workflow (should not access User 1's data)
         await authenticateUser('isolated-user-2');
-        
+
         const user2Search = await mockServer.callTool('pim_email_search', {
           query: 'user 2 different data',
-          platform: 'microsoft'
+          platform: 'microsoft',
         });
         expect(user2Search.content[0].text).toContain('user 2 different data');
 
         // Verify authentication status shows different users
         const user1Status = await mockServer.callTool('pim_auth_status', {
-          platform: 'microsoft'
+          platform: 'microsoft',
         });
         const status1 = JSON.parse(user1Status.content[0].text);
         expect(status1.isAuthenticated).toBe(true);
 
         console.log('✅ User isolation verified successfully!');
-
       } finally {
         process.emit('SIGTERM');
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -462,7 +453,7 @@ describe('End-to-End System Integration Tests', () => {
         // First search should fail
         const failedSearch = await mockServer.callTool('pim_email_search', {
           query: 'test during failure',
-          platform: 'microsoft'
+          platform: 'microsoft',
         });
         expect(failedSearch.content[0].text).toContain('failed');
 
@@ -476,12 +467,11 @@ describe('End-to-End System Integration Tests', () => {
         // Search should now succeed
         const recoveredSearch = await mockServer.callTool('pim_email_search', {
           query: 'test after recovery',
-          platform: 'microsoft'
+          platform: 'microsoft',
         });
         expect(recoveredSearch.content[0].text).toContain('Email search executed');
 
         console.log('✅ Service recovery verified successfully!');
-
       } finally {
         process.emit('SIGTERM');
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -505,8 +495,8 @@ describe('End-to-End System Integration Tests', () => {
           .reply(401, {
             error: {
               code: 'InvalidAuthenticationToken',
-              message: 'Access token has expired'
-            }
+              message: 'Access token has expired',
+            },
           });
 
         // Mock token refresh
@@ -522,12 +512,11 @@ describe('End-to-End System Integration Tests', () => {
         // Search should trigger token refresh and succeed
         const searchWithRefresh = await mockServer.callTool('pim_email_search', {
           query: 'test with token refresh',
-          platform: 'microsoft'
+          platform: 'microsoft',
         });
         expect(searchWithRefresh.content[0].text).toContain('Email search executed');
 
         console.log('✅ Token expiry handling verified successfully!');
-
       } finally {
         process.emit('SIGTERM');
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -548,14 +537,18 @@ describe('End-to-End System Integration Tests', () => {
         nock(mockGraphBaseUrl)
           .get('/v1.0/me/messages')
           .query(true)
-          .reply(429, {
-            error: {
-              code: 'TooManyRequests',
-              message: 'Request rate limit exceeded'
+          .reply(
+            429,
+            {
+              error: {
+                code: 'TooManyRequests',
+                message: 'Request rate limit exceeded',
+              },
+            },
+            {
+              'Retry-After': '1',
             }
-          }, {
-            'Retry-After': '1'
-          });
+          );
 
         // Follow-up request should succeed
         nock(mockGraphBaseUrl)
@@ -565,14 +558,13 @@ describe('End-to-End System Integration Tests', () => {
 
         const rateLimitedSearch = await mockServer.callTool('pim_email_search', {
           query: 'test with rate limiting',
-          platform: 'microsoft'
+          platform: 'microsoft',
         });
-        
+
         // Should eventually succeed after rate limit backoff
         expect(rateLimitedSearch.content[0].text).toContain('Email search executed');
 
         console.log('✅ Rate limit handling verified successfully!');
-
       } finally {
         process.emit('SIGTERM');
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -591,27 +583,27 @@ describe('End-to-End System Integration Tests', () => {
         console.log('🚀 Testing performance under sustained load...');
 
         const startTime = Date.now();
-        
+
         // Generate sustained load with mixed operations
         const loadOperations = [
           // Email searches
-          ...Array.from({ length: 20 }, (_, i) => 
+          ...Array.from({ length: 20 }, (_, i) =>
             mockServer.callTool('pim_email_search', {
               query: `performance test ${i}`,
-              platform: 'microsoft'
+              platform: 'microsoft',
             })
           ),
           // Email gets
           ...Array.from({ length: 10 }, (_, i) =>
             mockServer.callTool('pim_email_get', {
               emailId: `perf-email-${i}`,
-              platform: 'microsoft'
+              platform: 'microsoft',
             })
           ),
           // Auth status checks
           ...Array.from({ length: 15 }, () =>
             mockServer.callTool('pim_auth_status', {
-              platform: 'microsoft'
+              platform: 'microsoft',
             })
           ),
           // Calendar events
@@ -620,9 +612,9 @@ describe('End-to-End System Integration Tests', () => {
               title: `Performance Test Event ${i}`,
               start: `2024-12-${20 + i}T10:00:00Z`,
               end: `2024-12-${20 + i}T11:00:00Z`,
-              platform: 'microsoft'
+              platform: 'microsoft',
             })
-          )
+          ),
         ];
 
         const results = await Promise.allSettled(loadOperations);
@@ -649,7 +641,6 @@ describe('End-to-End System Integration Tests', () => {
         expect(endTime - startTime).toBeLessThan(30000); // Complete within 30 seconds
 
         console.log('✅ Performance test completed successfully!');
-
       } finally {
         process.emit('SIGTERM');
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -664,7 +655,7 @@ describe('End-to-End System Integration Tests', () => {
       // Test startup
       const startTime = Date.now();
       const appPromise = pimApp.main();
-      
+
       // Wait for startup
       await new Promise(resolve => setTimeout(resolve, 3000));
       const startupTime = Date.now() - startTime;
@@ -679,7 +670,7 @@ describe('End-to-End System Integration Tests', () => {
       // Test graceful shutdown
       const shutdownStartTime = Date.now();
       process.emit('SIGTERM');
-      
+
       // Wait for shutdown
       await new Promise(resolve => setTimeout(resolve, 2000));
       const shutdownTime = Date.now() - shutdownStartTime;
@@ -696,35 +687,35 @@ describe('End-to-End System Integration Tests', () => {
       // Start application
       let appInstance = new UnifiedPIMMain();
       const appPromise = appInstance.main();
-      
+
       await new Promise(resolve => setTimeout(resolve, 2000));
 
       // Authenticate and perform some operations
       await authenticateUser('recovery-test-user');
-      
+
       const beforeCrash = await mockServer.callTool('pim_auth_status', {
-        platform: 'microsoft'
+        platform: 'microsoft',
       });
       expect(JSON.parse(beforeCrash.content[0].text).isAuthenticated).toBe(true);
 
       // Simulate unclean shutdown (crash)
       console.log('💥 Simulating unclean shutdown...');
       process.emit('uncaughtException', new Error('Simulated crash'));
-      
+
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       // Start new instance (recovery)
       console.log('🔄 Starting recovery...');
       appInstance = new UnifiedPIMMain();
       const recoveryPromise = appInstance.main();
-      
+
       await new Promise(resolve => setTimeout(resolve, 3000));
 
       // Verify recovery - authentication state should be restored
       const afterRecovery = await mockServer.callTool('pim_auth_status', {
-        platform: 'microsoft'
+        platform: 'microsoft',
       });
-      
+
       // Should be able to perform operations
       expect(afterRecovery.content[0].text).toBeDefined();
 
@@ -740,7 +731,7 @@ describe('End-to-End System Integration Tests', () => {
   async function authenticateUser(userId: string): Promise<void> {
     const authStart = await mockServer.callTool('pim_auth_start', {
       platform: 'microsoft',
-      userId: userId
+      userId,
     });
 
     const authUrl = authStart.content[0].text.match(/https:\/\/[^\s]+/)[0];
@@ -749,7 +740,7 @@ describe('End-to-End System Integration Tests', () => {
     await mockServer.callTool('pim_auth_callback', {
       platform: 'microsoft',
       code: `test-code-${userId}`,
-      state: state
+      state,
     });
   }
 });

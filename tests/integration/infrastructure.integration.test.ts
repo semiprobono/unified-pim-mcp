@@ -1,18 +1,18 @@
-import { describe, test, expect, beforeAll, afterAll, beforeEach, afterEach } from '@jest/globals';
-import { RateLimiter } from '../../src/infrastructure/adapters/microsoft/clients/RateLimiter.js';
-import { CircuitBreaker } from '../../src/infrastructure/adapters/microsoft/clients/CircuitBreaker.js';
-import { CacheManager } from '../../src/infrastructure/cache/CacheManager.js';
-import { SecurityManager } from '../../src/shared/security/SecurityManager.js';
-import { ConfigManager } from '../../src/shared/config/ConfigManager.js';
-import { Logger } from '../../src/shared/logging/Logger.js';
-import { ResilienceManager } from '../../src/shared/resilience/ResilienceManager.js';
-import { ErrorHandler } from '../../src/shared/error/ErrorHandler.js';
-import { HealthMonitor } from '../../src/shared/monitoring/HealthMonitor.js';
-import { testConfig } from './setup.integration.js';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from '@jest/globals';
+import { RateLimiter } from '../../src/infrastructure/adapters/microsoft/clients/RateLimiter';
+import { CircuitBreaker } from '../../src/infrastructure/adapters/microsoft/clients/CircuitBreaker';
+import { CacheManager } from '../../src/infrastructure/cache/CacheManager';
+import { SecurityManager } from '../../src/shared/security/SecurityManager';
+import { ConfigManager } from '../../src/shared/config/ConfigManager';
+import { Logger } from '../../src/shared/logging/Logger';
+import { ResilienceManager } from '../../src/shared/resilience/ResilienceManager';
+import { ErrorHandler } from '../../src/shared/error/ErrorHandler';
+import { HealthMonitor } from '../../src/shared/monitoring/HealthMonitor';
+import { testConfig } from './setup.integration';
 
 /**
  * Infrastructure Integration Tests
- * 
+ *
  * Tests the interaction between infrastructure components:
  * 1. RateLimiter + CircuitBreaker behavior under load
  * 2. CacheManager + ChromaDB interaction
@@ -42,43 +42,40 @@ describe('Infrastructure Integration Tests', () => {
 
     errorHandler = new ErrorHandler(logger);
 
-    securityManager = new SecurityManager(
-      configManager.getConfig('security'),
-      logger
-    );
+    securityManager = new SecurityManager(configManager.getConfig('security'), logger);
     await securityManager.initialize();
 
-    resilienceManager = new ResilienceManager(
-      configManager.getConfig('resilience'),
-      logger
-    );
+    resilienceManager = new ResilienceManager(configManager.getConfig('resilience'), logger);
     await resilienceManager.initialize();
 
-    cacheManager = new CacheManager(
-      configManager.getConfig('cache'),
-      logger
-    );
+    cacheManager = new CacheManager(configManager.getConfig('cache'), logger);
     await cacheManager.initialize();
 
     // Initialize resilience components
-    rateLimiter = new RateLimiter({
-      windowMs: 60000, // 1 minute
-      maxRequests: 10,
-      identifier: 'test-limiter'
-    }, logger);
+    rateLimiter = new RateLimiter(
+      {
+        windowMs: 60000, // 1 minute
+        maxRequests: 10,
+        identifier: 'test-limiter',
+      },
+      logger
+    );
 
-    circuitBreaker = new CircuitBreaker({
-      failureThreshold: 3,
-      resetTimeout: 5000,
-      monitoringPeriod: 10000,
-      name: 'test-breaker'
-    }, logger);
+    circuitBreaker = new CircuitBreaker(
+      {
+        failureThreshold: 3,
+        resetTimeout: 5000,
+        monitoringPeriod: 10000,
+        name: 'test-breaker',
+      },
+      logger
+    );
 
     healthMonitor = new HealthMonitor(
       {
         cacheManager,
         securityManager,
-        platformManager: null // Not needed for these tests
+        platformManager: null, // Not needed for these tests
       },
       logger
     );
@@ -106,7 +103,8 @@ describe('Infrastructure Integration Tests', () => {
 
   describe('RateLimiter + CircuitBreaker Integration', () => {
     test('should coordinate rate limiting and circuit breaking', async () => {
-      const mockService = jest.fn()
+      const mockService = jest
+        .fn()
         .mockRejectedValueOnce(new Error('Service error 1'))
         .mockRejectedValueOnce(new Error('Service error 2'))
         .mockRejectedValueOnce(new Error('Service error 3'))
@@ -174,7 +172,8 @@ describe('Infrastructure Integration Tests', () => {
     });
 
     test('should provide detailed metrics for both components', async () => {
-      const mockService = jest.fn()
+      const mockService = jest
+        .fn()
         .mockRejectedValueOnce(new Error('Failure'))
         .mockResolvedValue('Success');
 
@@ -224,7 +223,7 @@ describe('Infrastructure Integration Tests', () => {
     });
 
     test('should handle concurrent cache operations safely', async () => {
-      const promises = Array.from({ length: 20 }, (_, i) => 
+      const promises = Array.from({ length: 20 }, (_, i) =>
         cacheManager.set(`concurrent-key-${i}`, { value: i }, { ttl: 10 })
       );
 
@@ -249,9 +248,9 @@ describe('Infrastructure Integration Tests', () => {
           query: jest.fn().mockResolvedValue({
             ids: [['doc1', 'doc2']],
             distances: [[0.1, 0.3]],
-            documents: [['Document 1 content', 'Document 2 content']]
+            documents: [['Document 1 content', 'Document 2 content']],
           }),
-          count: jest.fn().mockResolvedValue(2)
+          count: jest.fn().mockResolvedValue(2),
         };
 
         jest.spyOn(cacheManager, 'getCollection').mockResolvedValue(mockCollection);
@@ -260,7 +259,7 @@ describe('Infrastructure Integration Tests', () => {
       // Add documents for vector search
       const documents = [
         { id: 'doc1', content: 'Machine learning algorithms', metadata: { type: 'tech' } },
-        { id: 'doc2', content: 'Artificial intelligence applications', metadata: { type: 'tech' } }
+        { id: 'doc2', content: 'Artificial intelligence applications', metadata: { type: 'tech' } },
       ];
 
       await cacheManager.addToCollection('test-collection', documents);
@@ -269,7 +268,7 @@ describe('Infrastructure Integration Tests', () => {
       const searchResult = await cacheManager.vectorSearch({
         collection: 'test-collection',
         query: 'AI and ML technologies',
-        limit: 2
+        limit: 2,
       });
 
       expect(searchResult.success).toBe(true);
@@ -296,20 +295,18 @@ describe('Infrastructure Integration Tests', () => {
       const criticalData = [
         { key: 'user-settings', data: { theme: 'dark', lang: 'en' } },
         { key: 'system-config', data: { version: '1.0.0', env: 'test' } },
-        { key: 'feature-flags', data: { newUI: true, betaFeatures: false } }
+        { key: 'feature-flags', data: { newUI: true, betaFeatures: false } },
       ];
 
       // Warm cache with critical data
-      const warmPromises = criticalData.map(item =>
-        cacheManager.set(item.key, item.data, { ttl: 3600 }) // 1 hour
+      const warmPromises = criticalData.map(
+        item => cacheManager.set(item.key, item.data, { ttl: 3600 }) // 1 hour
       );
 
       await Promise.all(warmPromises);
 
       // Verify all critical data is available
-      const retrievePromises = criticalData.map(item =>
-        cacheManager.get(item.key)
-      );
+      const retrievePromises = criticalData.map(item => cacheManager.get(item.key));
 
       const results = await Promise.all(retrievePromises);
       results.forEach((result, i) => {
@@ -328,7 +325,7 @@ describe('Infrastructure Integration Tests', () => {
       const tokens = {
         accessToken: 'very-long-access-token-12345',
         refreshToken: 'refresh-token-67890',
-        expiresAt: new Date(Date.now() + 3600000)
+        expiresAt: new Date(Date.now() + 3600000),
       };
 
       // Store encrypted tokens
@@ -349,7 +346,7 @@ describe('Infrastructure Integration Tests', () => {
       const originalTokens = {
         accessToken: 'original-token',
         refreshToken: 'original-refresh',
-        expiresAt: new Date(Date.now() + 3600000)
+        expiresAt: new Date(Date.now() + 3600000),
       };
 
       await securityManager.storeTokens('rotation-test', originalTokens);
@@ -365,7 +362,7 @@ describe('Infrastructure Integration Tests', () => {
       const newTokens = {
         accessToken: 'new-token-after-rotation',
         refreshToken: 'new-refresh-after-rotation',
-        expiresAt: new Date(Date.now() + 3600000)
+        expiresAt: new Date(Date.now() + 3600000),
       };
 
       await securityManager.storeTokens('rotation-test-2', newTokens);
@@ -377,7 +374,7 @@ describe('Infrastructure Integration Tests', () => {
       const validTokens = {
         accessToken: 'valid-access-token',
         refreshToken: 'valid-refresh-token',
-        expiresAt: new Date(Date.now() + 3600000)
+        expiresAt: new Date(Date.now() + 3600000),
       };
 
       await securityManager.storeTokens('integrity-test', validTokens);
@@ -397,8 +394,8 @@ describe('Infrastructure Integration Tests', () => {
         tokens: {
           accessToken: `access-token-${i}`,
           refreshToken: `refresh-token-${i}`,
-          expiresAt: new Date(Date.now() + 3600000)
-        }
+          expiresAt: new Date(Date.now() + 3600000),
+        },
       }));
 
       // Store all tokens concurrently
@@ -433,15 +430,12 @@ describe('Infrastructure Integration Tests', () => {
         return 'Success after retries';
       });
 
-      const result = await resilienceManager.executeWithRetry(
-        flakeyService,
-        {
-          maxAttempts: 5,
-          baseDelay: 100,
-          maxDelay: 1000,
-          backoffFactor: 2
-        }
-      );
+      const result = await resilienceManager.executeWithRetry(flakeyService, {
+        maxAttempts: 5,
+        baseDelay: 100,
+        maxDelay: 1000,
+        backoffFactor: 2,
+      });
 
       expect(result).toBe('Success after retries');
       expect(attempts).toBe(3);
@@ -466,7 +460,7 @@ describe('Infrastructure Integration Tests', () => {
 
       const [criticalResult, nonCriticalResult] = await Promise.allSettled([
         criticalPromise,
-        nonCriticalPromise
+        nonCriticalPromise,
       ]);
 
       // Critical service should succeed despite non-critical failure
@@ -477,9 +471,9 @@ describe('Infrastructure Integration Tests', () => {
     });
 
     test('should provide timeout protection', async () => {
-      const slowService = jest.fn().mockImplementation(
-        () => new Promise(resolve => setTimeout(resolve, 5000))
-      );
+      const slowService = jest
+        .fn()
+        .mockImplementation(() => new Promise(resolve => setTimeout(resolve, 5000)));
 
       const startTime = Date.now();
 
@@ -500,7 +494,7 @@ describe('Infrastructure Integration Tests', () => {
         () => resilienceManager.executeWithRetry(() => Promise.resolve('Success 1')),
         () => resilienceManager.executeWithRetry(() => Promise.reject(new Error('Failure 1'))),
         () => resilienceManager.executeWithTimeout(() => Promise.resolve('Success 2'), 1000),
-        () => resilienceManager.executeInBulkhead('test-pool', () => Promise.resolve('Success 3'))
+        () => resilienceManager.executeInBulkhead('test-pool', () => Promise.resolve('Success 3')),
       ];
 
       await Promise.allSettled(operations.map(op => op()));
@@ -521,12 +515,10 @@ describe('Infrastructure Integration Tests', () => {
         new Error('Network timeout'),
         { message: 'Rate limit exceeded', status: 429 },
         { message: 'Authentication failed', status: 401 },
-        { message: 'Server error', status: 500 }
+        { message: 'Server error', status: 500 },
       ];
 
-      const handledErrors = await Promise.all(
-        errors.map(error => errorHandler.handleError(error))
-      );
+      const handledErrors = await Promise.all(errors.map(error => errorHandler.handleError(error)));
 
       // Verify error categorization
       expect(handledErrors[0].category).toBe('network');
@@ -548,7 +540,7 @@ describe('Infrastructure Integration Tests', () => {
         'RateLimitError',
         'AuthenticationError',
         'NetworkError', // Duplicate to test aggregation
-        'ServerError'
+        'ServerError',
       ];
 
       for (const errorType of errorTypes) {
@@ -571,7 +563,7 @@ describe('Infrastructure Integration Tests', () => {
         await errorHandler.handleError({
           message: 'Critical system failure',
           status: 500,
-          critical: true
+          critical: true,
         });
       }
 
@@ -604,7 +596,7 @@ describe('Infrastructure Integration Tests', () => {
       // Simulate cache failure
       jest.spyOn(cacheManager, 'getStatus').mockResolvedValue({
         isHealthy: false,
-        error: 'Cache connection lost'
+        error: 'Cache connection lost',
       });
 
       // Wait for health check cycle
@@ -625,7 +617,7 @@ describe('Infrastructure Integration Tests', () => {
       await securityManager.storeTokens('metric-platform', {
         accessToken: 'test-token',
         refreshToken: 'test-refresh',
-        expiresAt: new Date(Date.now() + 3600000)
+        expiresAt: new Date(Date.now() + 3600000),
       });
 
       const metrics = await healthMonitor.getSystemMetrics();
@@ -658,7 +650,7 @@ describe('Infrastructure Integration Tests', () => {
       // Simulate partial system failure
       jest.spyOn(cacheManager, 'getStatus').mockResolvedValue({
         isHealthy: false,
-        error: 'Cache degraded'
+        error: 'Cache degraded',
       });
 
       const degradationStatus = await healthMonitor.checkDegradation();
@@ -675,8 +667,8 @@ describe('Infrastructure Integration Tests', () => {
       // Simulate cascading failure scenario
       let cacheFailures = 0;
       const originalCacheGet = cacheManager.get;
-      
-      jest.spyOn(cacheManager, 'get').mockImplementation(async (key) => {
+
+      jest.spyOn(cacheManager, 'get').mockImplementation(async key => {
         cacheFailures++;
         if (cacheFailures > 3) {
           throw new Error('Cache overwhelmed');
@@ -709,13 +701,13 @@ describe('Infrastructure Integration Tests', () => {
 
     test('should maintain data consistency under load', async () => {
       const consistencyData = { version: 1, lastUpdate: Date.now() };
-      
+
       // Concurrent writes to the same data
       const writeOperations = Array.from({ length: 20 }, (_, i) =>
         securityManager.storeTokens(`consistency-test`, {
           accessToken: `token-${i}`,
           refreshToken: `refresh-${i}`,
-          expiresAt: new Date(Date.now() + 3600000)
+          expiresAt: new Date(Date.now() + 3600000),
         })
       );
 
@@ -734,10 +726,10 @@ describe('Infrastructure Integration Tests', () => {
         securityManager.storeTokens('diag-platform', {
           accessToken: 'diag-token',
           refreshToken: 'diag-refresh',
-          expiresAt: new Date(Date.now() + 3600000)
+          expiresAt: new Date(Date.now() + 3600000),
         }),
         rateLimiter.checkLimit('diag-user'),
-        circuitBreaker.execute(() => Promise.resolve('success'))
+        circuitBreaker.execute(() => Promise.resolve('success')),
       ]);
 
       // Collect comprehensive diagnostics
@@ -747,7 +739,7 @@ describe('Infrastructure Integration Tests', () => {
         rateLimiter: rateLimiter.getMetrics(),
         circuitBreaker: circuitBreaker.getMetrics(),
         resilience: resilienceManager.getMetrics(),
-        health: await healthMonitor.getHealthStatus()
+        health: await healthMonitor.getHealthStatus(),
       };
 
       // Verify all components report healthy status

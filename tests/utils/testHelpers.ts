@@ -3,15 +3,15 @@
  */
 
 import { Logger } from '../../src/shared/logging/Logger.js';
-import { 
-  createMockLogger, 
-  sleep, 
-  waitFor, 
-  generateTestId,
+import {
+  createMockLogger,
   generateTestEmail,
+  generateTestId,
   generateTestJWT,
+  sleep,
   TEST_CONFIG,
-  TEST_TIMESTAMPS
+  TEST_TIMESTAMPS,
+  waitFor,
 } from '../fixtures/testData.js';
 
 /**
@@ -32,7 +32,7 @@ export class TestEnvironment {
       AZURE_CLIENT_ID: TEST_CONFIG.AZURE_CLIENT_ID,
       AZURE_TENANT_ID: TEST_CONFIG.AZURE_TENANT_ID,
       AZURE_CLIENT_SECRET: TEST_CONFIG.AZURE_CLIENT_SECRET,
-      ...overrides
+      ...overrides,
     };
 
     // Save original values
@@ -86,7 +86,7 @@ export class TestDataGenerator {
     const firstName = `TestUser${++this.counter}`;
     const lastName = 'Generated';
     const email = generateTestEmail();
-    
+
     return {
       id,
       displayName: `${firstName} ${lastName}`,
@@ -99,7 +99,7 @@ export class TestDataGenerator {
       businessPhones: ['+1 555-0123'],
       mobilePhone: '+1 555-0124',
       preferredLanguage: 'en-US',
-      ...overrides
+      ...overrides,
     };
   }
 
@@ -113,20 +113,22 @@ export class TestDataGenerator {
       from: {
         emailAddress: {
           name: `Sender ${i + 1}`,
-          address: generateTestEmail()
-        }
+          address: generateTestEmail(),
+        },
       },
-      toRecipients: [{
-        emailAddress: {
-          name: 'Test User',
-          address: generateTestEmail()
-        }
-      }],
+      toRecipients: [
+        {
+          emailAddress: {
+            name: 'Test User',
+            address: generateTestEmail(),
+          },
+        },
+      ],
       receivedDateTime: new Date(Date.now() - Math.random() * 86400000).toISOString(),
       isRead: Math.random() > 0.5,
       hasAttachments: Math.random() > 0.7,
       bodyPreview: `This is test email ${i + 1} preview...`,
-      importance: Math.random() > 0.8 ? 'high' : 'normal'
+      importance: Math.random() > 0.8 ? 'high' : 'normal',
     }));
   }
 
@@ -137,35 +139,37 @@ export class TestDataGenerator {
     return Array.from({ length: count }, (_, i) => {
       const startTime = new Date(Date.now() + Math.random() * 86400000 * 7); // Next 7 days
       const endTime = new Date(startTime.getTime() + 3600000); // 1 hour duration
-      
+
       return {
         id: generateTestId('evt'),
         subject: `Test Meeting ${i + 1}`,
         start: {
           dateTime: startTime.toISOString(),
-          timeZone: 'UTC'
+          timeZone: 'UTC',
         },
         end: {
-          dateTime: endTime.toISOString(), 
-          timeZone: 'UTC'
+          dateTime: endTime.toISOString(),
+          timeZone: 'UTC',
         },
         location: {
-          displayName: `Conference Room ${i + 1}`
+          displayName: `Conference Room ${i + 1}`,
         },
-        attendees: [{
-          type: 'required',
-          status: {
-            response: 'none',
-            time: '0001-01-01T00:00:00Z'
+        attendees: [
+          {
+            type: 'required',
+            status: {
+              response: 'none',
+              time: '0001-01-01T00:00:00Z',
+            },
+            emailAddress: {
+              name: `Attendee ${i + 1}`,
+              address: generateTestEmail(),
+            },
           },
-          emailAddress: {
-            name: `Attendee ${i + 1}`,
-            address: generateTestEmail()
-          }
-        }],
+        ],
         isOrganizer: true,
         importance: 'normal',
-        sensitivity: 'normal'
+        sensitivity: 'normal',
       };
     });
   }
@@ -179,14 +183,16 @@ export class TestDataGenerator {
       displayName: `Test Contact ${i + 1}`,
       givenName: `Contact${i + 1}`,
       surname: 'Generated',
-      emailAddresses: [{
-        name: `Contact ${i + 1}`,
-        address: generateTestEmail()
-      }],
+      emailAddresses: [
+        {
+          name: `Contact ${i + 1}`,
+          address: generateTestEmail(),
+        },
+      ],
       businessPhones: [`+1 555-${String(i + 1).padStart(4, '0')}`],
       companyName: `Test Company ${i + 1}`,
       jobTitle: `Position ${i + 1}`,
-      department: 'Test Department'
+      department: 'Test Department',
     }));
   }
 
@@ -196,7 +202,7 @@ export class TestDataGenerator {
   static createTestTasks(count: number = 4) {
     return Array.from({ length: count }, (_, i) => {
       const dueDate = new Date(Date.now() + Math.random() * 86400000 * 14); // Next 14 days
-      
+
       return {
         id: generateTestId('task'),
         title: `Test Task ${i + 1}`,
@@ -204,13 +210,13 @@ export class TestDataGenerator {
         importance: Math.random() > 0.7 ? 'high' : 'normal',
         dueDateTime: {
           dateTime: dueDate.toISOString(),
-          timeZone: 'UTC'
+          timeZone: 'UTC',
         },
         body: {
           content: `This is the description for test task ${i + 1}`,
-          contentType: 'text'
+          contentType: 'text',
         },
-        categories: ['Work', 'Personal'][Math.floor(Math.random() * 2)]
+        categories: ['Work', 'Personal'][Math.floor(Math.random() * 2)],
       };
     });
   }
@@ -220,17 +226,26 @@ export class TestDataGenerator {
    */
   static createTestFiles(count: number = 3) {
     const fileTypes = [
-      { name: 'document.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' },
-      { name: 'spreadsheet.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' },
-      { name: 'presentation.pptx', mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' },
+      {
+        name: 'document.docx',
+        mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      },
+      {
+        name: 'spreadsheet.xlsx',
+        mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      },
+      {
+        name: 'presentation.pptx',
+        mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      },
       { name: 'image.png', mimeType: 'image/png' },
-      { name: 'document.pdf', mimeType: 'application/pdf' }
+      { name: 'document.pdf', mimeType: 'application/pdf' },
     ];
 
     return Array.from({ length: count }, (_, i) => {
       const fileType = fileTypes[i % fileTypes.length];
       const size = Math.floor(Math.random() * 1000000) + 1000; // 1KB to 1MB
-      
+
       return {
         id: generateTestId('file'),
         name: `test-${i + 1}-${fileType.name}`,
@@ -241,15 +256,15 @@ export class TestDataGenerator {
         file: {
           mimeType: fileType.mimeType,
           hashes: {
-            quickXorHash: generateTestId('hash')
-          }
+            quickXorHash: generateTestId('hash'),
+          },
         },
         parentReference: {
           driveId: generateTestId('drive'),
           driveType: 'personal',
           id: generateTestId('folder'),
-          path: '/drive/root:'
-        }
+          path: '/drive/root:',
+        },
       };
     });
   }
@@ -267,7 +282,7 @@ export class PerformanceTestUtils {
     const result = await fn();
     const end = process.hrtime.bigint();
     const duration = Number(end - start) / 1000000; // Convert to milliseconds
-    
+
     return { result, duration };
   }
 
@@ -280,21 +295,21 @@ export class PerformanceTestUtils {
     iterations: number = 100
   ): Promise<{ name: string; stats: PerformanceStats }> {
     const times: number[] = [];
-    
+
     console.log(`Running benchmark: ${name} (${iterations} iterations)`);
-    
+
     for (let i = 0; i < iterations; i++) {
       const { duration } = await this.measureTime(fn);
       times.push(duration);
-      
+
       if (i % Math.max(1, Math.floor(iterations / 10)) === 0) {
         console.log(`Progress: ${Math.round((i / iterations) * 100)}%`);
       }
     }
-    
+
     const stats = this.calculateStats(times);
     console.log(`Completed: ${name}`, stats);
-    
+
     return { name, stats };
   }
 
@@ -304,7 +319,7 @@ export class PerformanceTestUtils {
   private static calculateStats(times: number[]): PerformanceStats {
     const sorted = times.sort((a, b) => a - b);
     const sum = times.reduce((a, b) => a + b, 0);
-    
+
     return {
       min: Math.min(...times),
       max: Math.max(...times),
@@ -312,7 +327,10 @@ export class PerformanceTestUtils {
       median: sorted[Math.floor(sorted.length / 2)],
       p95: sorted[Math.floor(sorted.length * 0.95)],
       p99: sorted[Math.floor(sorted.length * 0.99)],
-      stdDev: Math.sqrt(times.map(x => Math.pow(x - (sum / times.length), 2)).reduce((a, b) => a + b, 0) / times.length)
+      stdDev: Math.sqrt(
+        times.map(x => Math.pow(x - sum / times.length, 2)).reduce((a, b) => a + b, 0) /
+          times.length
+      ),
     };
   }
 
@@ -332,19 +350,22 @@ export class PerformanceTestUtils {
   /**
    * Monitor memory usage over time
    */
-  static async monitorMemory(durationMs: number = 10000, intervalMs: number = 1000): Promise<MemorySnapshot[]> {
+  static async monitorMemory(
+    durationMs: number = 10000,
+    intervalMs: number = 1000
+  ): Promise<MemorySnapshot[]> {
     const snapshots: MemorySnapshot[] = [];
     const startTime = Date.now();
-    
+
     const interval = setInterval(() => {
       const timestamp = Date.now() - startTime;
       const memory = this.getMemoryUsage();
       snapshots.push({ timestamp, ...memory });
     }, intervalMs);
-    
+
     await sleep(durationMs);
     clearInterval(interval);
-    
+
     return snapshots;
   }
 }
@@ -362,11 +383,11 @@ export class TestAssertions {
     message?: string
   ): Promise<T> {
     const { result, duration } = await PerformanceTestUtils.measureTime(fn);
-    
+
     if (duration > maxTimeMs) {
       throw new Error(message || `Function took ${duration}ms, expected <${maxTimeMs}ms`);
     }
-    
+
     return result;
   }
 
@@ -375,7 +396,7 @@ export class TestAssertions {
    */
   static assertMemoryUsageBelow(limitMB: number, message?: string): void {
     const usage = PerformanceTestUtils.getMemoryUsage();
-    
+
     if (usage.heapUsed > limitMB) {
       throw new Error(message || `Heap usage ${usage.heapUsed}MB exceeds limit ${limitMB}MB`);
     }
@@ -384,21 +405,24 @@ export class TestAssertions {
   /**
    * Assert that an operation has acceptable performance characteristics
    */
-  static assertPerformanceAcceptable(stats: PerformanceStats, thresholds: PerformanceThresholds): void {
+  static assertPerformanceAcceptable(
+    stats: PerformanceStats,
+    thresholds: PerformanceThresholds
+  ): void {
     const failures: string[] = [];
-    
+
     if (thresholds.maxMean && stats.mean > thresholds.maxMean) {
       failures.push(`Mean time ${stats.mean.toFixed(2)}ms > ${thresholds.maxMean}ms`);
     }
-    
+
     if (thresholds.maxP95 && stats.p95 > thresholds.maxP95) {
       failures.push(`P95 time ${stats.p95.toFixed(2)}ms > ${thresholds.maxP95}ms`);
     }
-    
+
     if (thresholds.maxP99 && stats.p99 > thresholds.maxP99) {
       failures.push(`P99 time ${stats.p99.toFixed(2)}ms > ${thresholds.maxP99}ms`);
     }
-    
+
     if (failures.length > 0) {
       throw new Error(`Performance thresholds exceeded:\n${failures.join('\n')}`);
     }
@@ -419,7 +443,11 @@ export class MockFactory {
   /**
    * Create mock HTTP responses
    */
-  static createHttpResponse(status: number = 200, data: any = {}, headers: Record<string, string> = {}) {
+  static createHttpResponse(
+    status: number = 200,
+    data: any = {},
+    headers: Record<string, string> = {}
+  ) {
     return {
       status,
       statusText: status >= 200 && status < 300 ? 'OK' : 'Error',
@@ -429,12 +457,12 @@ export class MockFactory {
         'x-ratelimit-remaining': '9999',
         'x-ratelimit-limit': '10000',
         'x-ratelimit-reset': Math.floor((Date.now() + 600000) / 1000).toString(),
-        ...headers
+        ...headers,
       },
       config: {
         url: '/test-endpoint',
-        method: 'GET'
-      }
+        method: 'GET',
+      },
     };
   }
 
@@ -447,12 +475,12 @@ export class MockFactory {
         aud: TEST_CONFIG.AZURE_CLIENT_ID,
         iss: `https://login.microsoftonline.com/${TEST_CONFIG.AZURE_TENANT_ID}/v2.0`,
         preferred_username: generateTestEmail(),
-        ...overrides.claims
+        ...overrides.claims,
       }),
       refreshToken: generateTestId('refresh'),
       expiresOn: new Date(Date.now() + 3600000), // 1 hour
       scopes: ['https://graph.microsoft.com/User.Read'],
-      ...overrides
+      ...overrides,
     };
   }
 }
@@ -532,14 +560,14 @@ export const TestScenarios = {
     validCredentials: () => ({
       clientId: TEST_CONFIG.AZURE_CLIENT_ID,
       tenantId: TEST_CONFIG.AZURE_TENANT_ID,
-      redirectUri: 'http://localhost:3000/auth/callback'
+      redirectUri: 'http://localhost:3000/auth/callback',
     }),
-    
+
     invalidCredentials: () => ({
       clientId: 'invalid-client-id',
       tenantId: 'invalid-tenant-id',
-      redirectUri: 'http://localhost:3000/auth/callback'
-    })
+      redirectUri: 'http://localhost:3000/auth/callback',
+    }),
   },
 
   /**
@@ -550,7 +578,7 @@ export const TestScenarios = {
     rateLimited: { status: 429, delay: 0, retryAfter: 60 },
     serverError: { status: 500, delay: 200 },
     timeout: { status: 0, delay: 35000 }, // Longer than typical timeout
-    networkError: { error: 'ECONNREFUSED' }
+    networkError: { error: 'ECONNREFUSED' },
   },
 
   /**
@@ -559,8 +587,8 @@ export const TestScenarios = {
   performance: {
     baseline: { iterations: 100, concurrent: 1 },
     load: { iterations: 1000, concurrent: 10 },
-    stress: { iterations: 5000, concurrent: 50 }
-  }
+    stress: { iterations: 5000, concurrent: 50 },
+  },
 };
 
 // Export test utilities
@@ -572,5 +600,5 @@ export {
   generateTestEmail,
   generateTestJWT,
   TEST_CONFIG,
-  TEST_TIMESTAMPS
+  TEST_TIMESTAMPS,
 };

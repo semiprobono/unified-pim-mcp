@@ -11,18 +11,18 @@ const execAsync = promisify(exec);
  */
 export default async function globalTeardown(): Promise<void> {
   console.log('🧹 Cleaning up integration test environment...');
-  
+
   const isRealIntegration = process.env.REAL_INTEGRATION === 'true';
-  
+
   if (isRealIntegration) {
     await cleanupRealServices();
   } else {
     await cleanupMockServices();
   }
-  
+
   // Cleanup test files
   await cleanupTestFiles();
-  
+
   console.log('✅ Integration test environment cleaned up');
 }
 
@@ -31,7 +31,7 @@ export default async function globalTeardown(): Promise<void> {
  */
 async function cleanupRealServices(): Promise<void> {
   console.log('🌐 Cleaning up real external services...');
-  
+
   try {
     // Stop Docker containers but don't remove volumes (for development)
     await execAsync('docker-compose -f docker-compose.dev.yml stop');
@@ -46,7 +46,7 @@ async function cleanupRealServices(): Promise<void> {
  */
 async function cleanupMockServices(): Promise<void> {
   console.log('🎭 Cleaning up mock services...');
-  
+
   // Mock services cleanup would go here
   // For now, just log that we're cleaning up mocks
   console.log('🎭 Mock services cleaned up');
@@ -57,17 +57,13 @@ async function cleanupMockServices(): Promise<void> {
  */
 async function cleanupTestFiles(): Promise<void> {
   console.log('📁 Cleaning up test files...');
-  
-  const filesToCleanup = [
-    '.env.test',
-    'test-*.log',
-    'integration-test-*.json'
-  ];
-  
+
+  const filesToCleanup = ['.env.test', 'test-*.log', 'integration-test-*.json'];
+
   for (const filePattern of filesToCleanup) {
     try {
       const filePath = path.join(process.cwd(), filePattern);
-      
+
       // Check if file exists before trying to delete
       try {
         await fs.access(filePath);
@@ -80,13 +76,10 @@ async function cleanupTestFiles(): Promise<void> {
       console.warn(`⚠️ Failed to cleanup ${filePattern}:`, error);
     }
   }
-  
+
   // Cleanup test cache directories
-  const cacheDirs = [
-    'node_modules/.cache/jest-integration',
-    'coverage/integration/.temp'
-  ];
-  
+  const cacheDirs = ['node_modules/.cache/jest-integration', 'coverage/integration/.temp'];
+
   for (const dir of cacheDirs) {
     try {
       const dirPath = path.join(process.cwd(), dir);

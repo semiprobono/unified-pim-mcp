@@ -2,7 +2,7 @@ import { faker } from '@faker-js/faker';
 
 /**
  * Test Data Generator
- * 
+ *
  * Generates realistic test data for integration tests:
  * - Email data with proper structure
  * - User profiles and authentication data
@@ -176,35 +176,43 @@ export class EmailDataGenerator {
       from: {
         emailAddress: {
           name: faker.person.fullName(),
-          address: faker.internet.email()
-        }
+          address: faker.internet.email(),
+        },
       },
       toRecipients: Array.from({ length: faker.number.int({ min: 1, max: 3 }) }, () => ({
         emailAddress: {
           name: faker.person.fullName(),
-          address: faker.internet.email()
-        }
+          address: faker.internet.email(),
+        },
       })),
-      ccRecipients: faker.datatype.boolean(0.3) ? Array.from({ length: faker.number.int({ min: 1, max: 2 }) }, () => ({
-        emailAddress: {
-          name: faker.person.fullName(),
-          address: faker.internet.email()
-        }
-      })) : undefined,
+      ccRecipients: faker.datatype.boolean(0.3)
+        ? Array.from({ length: faker.number.int({ min: 1, max: 2 }) }, () => ({
+            emailAddress: {
+              name: faker.person.fullName(),
+              address: faker.internet.email(),
+            },
+          }))
+        : undefined,
       body: {
         contentType,
-        content: contentType === 'html' ? this.generateHtmlEmailBody() : this.generateTextEmailBody()
+        content:
+          contentType === 'html' ? this.generateHtmlEmailBody() : this.generateTextEmailBody(),
       },
       receivedDateTime: faker.date.recent({ days: 30 }).toISOString(),
       sentDateTime: faker.date.recent({ days: 30 }).toISOString(),
       isRead,
       hasAttachments,
       importance,
-      categories: faker.helpers.arrayElements(['Personal', 'Work', 'Important', 'Travel', 'Finance'], { min: 0, max: 2 }),
+      categories: faker.helpers.arrayElements(
+        ['Personal', 'Work', 'Important', 'Travel', 'Finance'],
+        { min: 0, max: 2 }
+      ),
       conversationId: faker.string.uuid(),
       parentFolderId: faker.helpers.arrayElement(['inbox', 'sent', 'drafts', 'deleted']),
-      attachments: hasAttachments ? this.generateAttachments(faker.number.int({ min: 1, max: 3 })) : undefined,
-      ...overrides
+      attachments: hasAttachments
+        ? this.generateAttachments(faker.number.int({ min: 1, max: 3 }))
+        : undefined,
+      ...overrides,
     };
   }
 
@@ -229,7 +237,7 @@ export class EmailDataGenerator {
       'Technical Documentation Review',
       'Annual Performance Evaluation',
       'Office Relocation Notice',
-      'Software License Renewal'
+      'Software License Renewal',
     ];
 
     return faker.helpers.arrayElement(subjects);
@@ -246,7 +254,10 @@ export class EmailDataGenerator {
       <html>
         <body>
           <h2>${faker.lorem.sentence()}</h2>
-          ${content.split('\n\n').map(p => `<p>${p}</p>`).join('\n')}
+          ${content
+            .split('\n\n')
+            .map(p => `<p>${p}</p>`)
+            .join('\n')}
           <br>
           <p>Best regards,<br>${faker.person.fullName()}</p>
         </body>
@@ -264,12 +275,12 @@ export class EmailDataGenerator {
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         'image/jpeg',
         'image/png',
-        'text/plain'
+        'text/plain',
       ]),
       size: faker.number.int({ min: 1024, max: 5242880 }), // 1KB to 5MB
       isInline: faker.datatype.boolean(0.1), // 10% inline
       lastModifiedDateTime: faker.date.recent({ days: 7 }).toISOString(),
-      contentBytes: faker.datatype.boolean(0.5) ? faker.string.alphanumeric(100) : undefined
+      contentBytes: faker.datatype.boolean(0.5) ? faker.string.alphanumeric(100) : undefined,
     }));
   }
 }
@@ -291,47 +302,57 @@ export class CalendarEventDataGenerator {
       subject: this.generateEventSubject(),
       start: {
         dateTime: startDate.toISOString(),
-        timeZone: 'UTC'
+        timeZone: 'UTC',
       },
       end: {
         dateTime: endDate.toISOString(),
-        timeZone: 'UTC'
+        timeZone: 'UTC',
       },
-      location: faker.datatype.boolean(0.7) ? {
-        displayName: this.generateLocation(),
-        address: {
-          street: faker.location.streetAddress(),
-          city: faker.location.city(),
-          state: faker.location.state(),
-          countryOrRegion: faker.location.country(),
-          postalCode: faker.location.zipCode()
-        }
-      } : undefined,
+      location: faker.datatype.boolean(0.7)
+        ? {
+            displayName: this.generateLocation(),
+            address: {
+              street: faker.location.streetAddress(),
+              city: faker.location.city(),
+              state: faker.location.state(),
+              countryOrRegion: faker.location.country(),
+              postalCode: faker.location.zipCode(),
+            },
+          }
+        : undefined,
       attendees: Array.from({ length: faker.number.int({ min: 1, max: 5 }) }, () => ({
         emailAddress: {
           name: faker.person.fullName(),
-          address: faker.internet.email()
+          address: faker.internet.email(),
         },
         status: {
-          response: faker.helpers.arrayElement(['none', 'accepted', 'declined', 'tentativelyAccepted']),
-          time: faker.date.recent({ days: 1 }).toISOString()
-        }
+          response: faker.helpers.arrayElement([
+            'none',
+            'accepted',
+            'declined',
+            'tentativelyAccepted',
+          ]),
+          time: faker.date.recent({ days: 1 }).toISOString(),
+        },
       })),
       organizer: {
         emailAddress: {
           name: faker.person.fullName(),
-          address: faker.internet.email()
-        }
+          address: faker.internet.email(),
+        },
       },
       body: {
         contentType: 'html',
-        content: `<p>${faker.lorem.paragraphs(2, '<br><br>')}</p>`
+        content: `<p>${faker.lorem.paragraphs(2, '<br><br>')}</p>`,
       },
       importance: faker.helpers.arrayElement(['low', 'normal', 'high']),
       showAs: faker.helpers.arrayElement(['free', 'tentative', 'busy', 'oof', 'workingElsewhere']),
       sensitivity: faker.helpers.arrayElement(['normal', 'personal', 'private', 'confidential']),
-      categories: faker.helpers.arrayElements(['Meeting', 'Appointment', 'Reminder', 'Travel', 'Personal'], { min: 0, max: 2 }),
-      ...overrides
+      categories: faker.helpers.arrayElements(
+        ['Meeting', 'Appointment', 'Reminder', 'Travel', 'Personal'],
+        { min: 0, max: 2 }
+      ),
+      ...overrides,
     };
   }
 
@@ -356,7 +377,7 @@ export class CalendarEventDataGenerator {
       'Milestone Review',
       'Vendor Meeting',
       'Executive Briefing',
-      'Technical Deep Dive'
+      'Technical Deep Dive',
     ];
 
     return faker.helpers.arrayElement(subjects);
@@ -375,7 +396,7 @@ export class CalendarEventDataGenerator {
       'Cafeteria',
       'Building Lobby',
       'Offsite Location',
-      'Remote/Online'
+      'Remote/Online',
     ];
 
     return faker.helpers.arrayElement(locations);
@@ -403,12 +424,16 @@ export class ContactDataGenerator {
       emailAddresses: [
         {
           name: 'Work',
-          address: faker.internet.email({ firstName, lastName })
+          address: faker.internet.email({ firstName, lastName }),
         },
-        ...(faker.datatype.boolean(0.3) ? [{
-          name: 'Personal',
-          address: faker.internet.email({ firstName, lastName, provider: 'gmail.com' })
-        }] : [])
+        ...(faker.datatype.boolean(0.3)
+          ? [
+              {
+                name: 'Personal',
+                address: faker.internet.email({ firstName, lastName, provider: 'gmail.com' }),
+              },
+            ]
+          : []),
       ],
       businessPhones: [faker.phone.number()],
       homePhones: faker.datatype.boolean(0.5) ? [faker.phone.number()] : [],
@@ -418,20 +443,32 @@ export class ContactDataGenerator {
         city: faker.location.city(),
         state: faker.location.state(),
         countryOrRegion: faker.location.country(),
-        postalCode: faker.location.zipCode()
+        postalCode: faker.location.zipCode(),
       },
-      homeAddress: faker.datatype.boolean(0.6) ? {
-        street: faker.location.streetAddress(),
-        city: faker.location.city(),
-        state: faker.location.state(),
-        countryOrRegion: faker.location.country(),
-        postalCode: faker.location.zipCode()
-      } : undefined,
+      homeAddress: faker.datatype.boolean(0.6)
+        ? {
+            street: faker.location.streetAddress(),
+            city: faker.location.city(),
+            state: faker.location.state(),
+            countryOrRegion: faker.location.country(),
+            postalCode: faker.location.zipCode(),
+          }
+        : undefined,
       companyName: faker.company.name(),
       jobTitle: faker.person.jobTitle(),
-      department: faker.helpers.arrayElement(['Engineering', 'Marketing', 'Sales', 'HR', 'Finance', 'Operations']),
-      categories: faker.helpers.arrayElements(['Business', 'Personal', 'VIP', 'Vendor', 'Client'], { min: 0, max: 2 }),
-      ...overrides
+      department: faker.helpers.arrayElement([
+        'Engineering',
+        'Marketing',
+        'Sales',
+        'HR',
+        'Finance',
+        'Operations',
+      ]),
+      categories: faker.helpers.arrayElements(['Business', 'Personal', 'VIP', 'Vendor', 'Client'], {
+        min: 0,
+        max: 2,
+      }),
+      ...overrides,
     };
   }
 }
@@ -458,17 +495,26 @@ export class UserDataGenerator {
       userPrincipalName: `${firstName.toLowerCase()}.${lastName.toLowerCase()}@${domain}`,
       mail: `${firstName.toLowerCase()}.${lastName.toLowerCase()}@${domain}`,
       mobilePhone: faker.datatype.boolean(0.7) ? faker.phone.number() : undefined,
-      officeLocation: faker.datatype.boolean(0.8) ? faker.helpers.arrayElement([
-        'Building A, Floor 1',
-        'Building A, Floor 2',
-        'Building B, Floor 3',
-        'Remote Office',
-        'Main Campus'
-      ]) : undefined,
+      officeLocation: faker.datatype.boolean(0.8)
+        ? faker.helpers.arrayElement([
+            'Building A, Floor 1',
+            'Building A, Floor 2',
+            'Building B, Floor 3',
+            'Remote Office',
+            'Main Campus',
+          ])
+        : undefined,
       jobTitle: faker.person.jobTitle(),
-      department: faker.helpers.arrayElement(['Engineering', 'Marketing', 'Sales', 'HR', 'Finance', 'Operations']),
+      department: faker.helpers.arrayElement([
+        'Engineering',
+        'Marketing',
+        'Sales',
+        'HR',
+        'Finance',
+        'Operations',
+      ]),
       accountEnabled: faker.datatype.boolean(0.95), // 95% enabled
-      ...overrides
+      ...overrides,
     };
   }
 }
@@ -486,7 +532,7 @@ export class TestScenarioGenerator {
     const baseSubject = EmailDataGenerator['generateEmailSubject']();
     const participants = Array.from({ length: faker.number.int({ min: 2, max: 4 }) }, () => ({
       name: faker.person.fullName(),
-      email: faker.internet.email()
+      email: faker.internet.email(),
     }));
 
     return Array.from({ length: messageCount }, (_, index) => {
@@ -499,17 +545,21 @@ export class TestScenarioGenerator {
         from: {
           emailAddress: {
             name: sender.name,
-            address: sender.email
-          }
+            address: sender.email,
+          },
         },
         toRecipients: recipients.map(r => ({
           emailAddress: {
             name: r.name,
-            address: r.email
-          }
+            address: r.email,
+          },
         })),
-        receivedDateTime: new Date(Date.now() - (messageCount - index) * 24 * 60 * 60 * 1000).toISOString(),
-        sentDateTime: new Date(Date.now() - (messageCount - index) * 24 * 60 * 60 * 1000 - 60000).toISOString()
+        receivedDateTime: new Date(
+          Date.now() - (messageCount - index) * 24 * 60 * 60 * 1000
+        ).toISOString(),
+        sentDateTime: new Date(
+          Date.now() - (messageCount - index) * 24 * 60 * 60 * 1000 - 60000
+        ).toISOString(),
       });
     });
   }
@@ -526,7 +576,7 @@ export class TestScenarioGenerator {
     const invitationEmail = EmailDataGenerator.generateEmail({
       subject: `Meeting Invitation: ${event.subject}`,
       from: {
-        emailAddress: organizer
+        emailAddress: organizer,
       },
       toRecipients: attendeeEmails.map(email => ({ emailAddress: email })),
       body: {
@@ -536,27 +586,31 @@ export class TestScenarioGenerator {
           <p><strong>When:</strong> ${event.start.dateTime}</p>
           <p><strong>Where:</strong> ${event.location?.displayName || 'Online'}</p>
           <p>${event.body.content}</p>
-        `
+        `,
       },
-      categories: ['Meeting', 'Important']
+      categories: ['Meeting', 'Important'],
     });
 
     // Generate follow-up emails
     const followUpEmails = Array.from({ length: faker.number.int({ min: 1, max: 3 }) }, () => {
       const sender = faker.helpers.arrayElement([organizer, ...attendeeEmails]);
-      const recipients = [organizer, ...attendeeEmails].filter(email => email.address !== sender.address);
+      const recipients = [organizer, ...attendeeEmails].filter(
+        email => email.address !== sender.address
+      );
 
       return EmailDataGenerator.generateEmail({
         subject: `RE: Meeting Invitation: ${event.subject}`,
         from: { emailAddress: sender },
-        toRecipients: recipients.slice(0, faker.number.int({ min: 1, max: recipients.length })).map(email => ({ emailAddress: email })),
-        categories: ['Meeting']
+        toRecipients: recipients
+          .slice(0, faker.number.int({ min: 1, max: recipients.length }))
+          .map(email => ({ emailAddress: email })),
+        categories: ['Meeting'],
       });
     });
 
     return {
       event,
-      emails: [invitationEmail, ...followUpEmails]
+      emails: [invitationEmail, ...followUpEmails],
     };
   }
 
@@ -570,20 +624,22 @@ export class TestScenarioGenerator {
     contacts: TestContactData[];
   } {
     const projectName = faker.company.buzzPhrase();
-    
+
     // Generate team members
     const users = UserDataGenerator.generateUsers(faker.number.int({ min: 3, max: 6 }));
-    
+
     // Generate external contacts
     const contacts = ContactDataGenerator.generateContacts(faker.number.int({ min: 2, max: 4 }));
-    
+
     // Generate project emails
     const emails = Array.from({ length: faker.number.int({ min: 10, max: 20 }) }, () => {
       const allParticipants = [
         ...users.map(u => ({ name: u.displayName, address: u.mail })),
-        ...contacts.flatMap(c => c.emailAddresses.map(e => ({ name: c.displayName, address: e.address })))
+        ...contacts.flatMap(c =>
+          c.emailAddresses.map(e => ({ name: c.displayName, address: e.address }))
+        ),
       ];
-      
+
       const sender = faker.helpers.arrayElement(allParticipants);
       const recipients = faker.helpers.arrayElements(
         allParticipants.filter(p => p.address !== sender.address),
@@ -599,11 +655,11 @@ export class TestScenarioGenerator {
           'Milestone Achieved',
           'Issue Escalation',
           'Resource Request',
-          'Timeline Update'
+          'Timeline Update',
         ])}`,
         from: { emailAddress: sender },
         toRecipients: recipients.map(r => ({ emailAddress: r })),
-        categories: ['Project', 'Work']
+        categories: ['Project', 'Work'],
       });
     });
 
@@ -622,25 +678,25 @@ export class TestScenarioGenerator {
           'Daily Standup',
           'Design Session',
           'Client Presentation',
-          'Retrospective'
+          'Retrospective',
         ])}`,
         organizer: {
           emailAddress: {
             name: organizer.displayName,
-            address: organizer.mail
-          }
+            address: organizer.mail,
+          },
         },
         attendees: attendees.map(a => ({
           emailAddress: {
             name: a.displayName,
-            address: a.mail
+            address: a.mail,
           },
           status: {
             response: faker.helpers.arrayElement(['accepted', 'tentativelyAccepted', 'none']),
-            time: faker.date.recent({ days: 1 }).toISOString()
-          }
+            time: faker.date.recent({ days: 1 }).toISOString(),
+          },
         })),
-        categories: ['Project', 'Meeting']
+        categories: ['Project', 'Meeting'],
       });
     });
 
@@ -656,5 +712,5 @@ export {
   CalendarEventDataGenerator,
   ContactDataGenerator,
   UserDataGenerator,
-  TestScenarioGenerator
+  TestScenarioGenerator,
 };

@@ -234,7 +234,7 @@ export class ContactEntity implements Contact {
    */
   addCategories(newCategories: string[]): ContactEntity {
     const updatedCategories = [...new Set([...this.categories, ...newCategories])];
-    
+
     return new ContactEntity(
       this.id,
       this.platformIds,
@@ -288,19 +288,19 @@ export class ContactEntity implements Contact {
     if (this.name.displayName) {
       return this.name.displayName;
     }
-    
+
     if (this.name.givenName && this.name.surname) {
       return `${this.name.givenName} ${this.name.surname}`;
     }
-    
+
     if (this.name.givenName) {
       return this.name.givenName;
     }
-    
+
     if (this.primaryEmail) {
       return this.primaryEmail.address;
     }
-    
+
     return 'Unknown Contact';
   }
 
@@ -314,7 +314,7 @@ export class ContactEntity implements Contact {
     }
 
     // Check for shared email addresses
-    const sharedEmails = this.emails.some(email => 
+    const sharedEmails = this.emails.some(email =>
       other.emails.some(otherEmail => email.equals(otherEmail))
     );
     if (sharedEmails) {
@@ -338,17 +338,17 @@ export class ContactEntity implements Contact {
   mergeWith(other: Contact): ContactEntity {
     // Use the more complete name
     const mergedName = this.name.isMoreCompleteThan(other.name) ? this.name : other.name;
-    
+
     // Merge emails (deduplicated)
     const allEmails = [...this.emails, ...other.emails];
-    const uniqueEmails = allEmails.filter((email, index, arr) =>
-      arr.findIndex(e => e.equals(email)) === index
+    const uniqueEmails = allEmails.filter(
+      (email, index, arr) => arr.findIndex(e => e.equals(email)) === index
     );
 
     // Merge phones (deduplicated)
     const allPhones = [...this.phones, ...other.phones];
-    const uniquePhones = allPhones.filter((phone, index, arr) =>
-      arr.findIndex(p => p.equals(phone)) === index
+    const uniquePhones = allPhones.filter(
+      (phone, index, arr) => arr.findIndex(p => p.equals(phone)) === index
     );
 
     // Merge addresses
@@ -361,9 +361,8 @@ export class ContactEntity implements Contact {
     const mergedOrganization = this.organization || other.organization;
 
     // Use the more complete notes
-    const mergedNotes = this.notes && other.notes 
-      ? `${this.notes}\n\n${other.notes}`
-      : this.notes || other.notes;
+    const mergedNotes =
+      this.notes && other.notes ? `${this.notes}\n\n${other.notes}` : this.notes || other.notes;
 
     // Merge platform IDs
     const mergedPlatformIds = new Map([...this.platformIds, ...other.platformIds]);
@@ -413,7 +412,7 @@ export class ContactEntity implements Contact {
       displayName: this.displayName,
       primaryEmail: this.primaryEmail?.toJSON(),
       primaryPhone: this.primaryPhone?.toJSON(),
-      metadata: this.metadata
+      metadata: this.metadata,
     };
   }
 }

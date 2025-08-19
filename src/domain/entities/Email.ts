@@ -14,7 +14,7 @@ export interface Attachment {
   name: string;
   contentType: string;
   size: number;
-  contentBytes?: string  | undefined; // Base64 encoded
+  contentBytes?: string | undefined; // Base64 encoded
   downloadUrl?: string;
   isInline: boolean;
 }
@@ -24,7 +24,7 @@ export interface Email {
   readonly platformIds: Map<Platform, string>;
   readonly from: EmailAddress;
   readonly to: EmailAddress[];
-  readonly cc?: EmailAddress[] ;
+  readonly cc?: EmailAddress[];
   readonly bcc?: EmailAddress[] | undefined;
   readonly replyTo?: EmailAddress[] | undefined;
   readonly subject: string;
@@ -75,7 +75,7 @@ export class EmailEntity implements Email {
   createReply(from: EmailAddress, replyAll: boolean = false): Partial<Email> | undefined {
     const replyTo = this.replyTo && this.replyTo.length > 0 ? this.replyTo : [this.from];
     const recipients = replyAll ? [...replyTo, ...this.to, ...(this.cc || [])] : replyTo;
-    
+
     // Remove the reply sender from recipients
     const filteredRecipients = recipients.filter(addr => !addr.equals(from));
 
@@ -85,7 +85,7 @@ export class EmailEntity implements Email {
       subject: this.subject.startsWith('Re: ') ? this.subject : `Re: ${this.subject}`,
       body: {
         content: `\n\n--- Original Message ---\nFrom: ${this.from.toString()}\nSent: ${this.receivedDateTime.toISOString()}\nTo: ${this.to.map(t => t.toString()).join('; ')}\nSubject: ${this.subject}\n\n${this.body.content}`,
-        contentType: this.body.contentType
+        contentType: this.body.contentType,
       },
       attachments: [],
       conversationId: this.conversationId,
@@ -93,7 +93,7 @@ export class EmailEntity implements Email {
       isDraft: true,
       isRead: true,
       receivedDateTime: new Date(),
-      categories: []
+      categories: [],
     };
   }
 
@@ -107,14 +107,14 @@ export class EmailEntity implements Email {
       subject: this.subject.startsWith('Fwd: ') ? this.subject : `Fwd: ${this.subject}`,
       body: {
         content: `--- Forwarded Message ---\nFrom: ${this.from.toString()}\nSent: ${this.receivedDateTime.toISOString()}\nTo: ${this.to.map(t => t.toString()).join('; ')}\nSubject: ${this.subject}\n\n${this.body.content}`,
-        contentType: this.body.contentType
+        contentType: this.body.contentType,
       },
       attachments: [...this.attachments], // Forward all attachments
       importance: 'normal' as const,
       isDraft: true,
       isRead: true,
       receivedDateTime: new Date(),
-      categories: []
+      categories: [],
     };
   }
 
@@ -150,7 +150,7 @@ export class EmailEntity implements Email {
    */
   addCategories(newCategories: string[]): EmailEntity | undefined {
     const updatedCategories = [...new Set([...this.categories, ...newCategories])];
-    
+
     return new EmailEntity(
       this.id,
       this.platformIds,
@@ -198,7 +198,7 @@ export class EmailEntity implements Email {
       conversationId: this.conversationId,
       internetMessageId: this.internetMessageId,
       categories: this.categories,
-      metadata: this.metadata
+      metadata: this.metadata,
     };
   }
 }

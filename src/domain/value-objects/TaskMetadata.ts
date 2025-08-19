@@ -9,7 +9,7 @@ export interface TaskMetadata {
   readonly webLink?: string | undefined;
   readonly changeKey?: string | undefined;
   readonly etag?: string | undefined;
-  readonly position?: string  | undefined; // For ordering tasks 
+  readonly position?: string | undefined; // For ordering tasks
   readonly isHidden: boolean;
   readonly hasSubtasks: boolean;
   readonly completedSubtasks: number;
@@ -158,7 +158,7 @@ export class TaskMetadataImpl implements TaskMetadata {
         pattern: recurrencePattern,
         interval,
         endDate,
-        count
+        count,
       }
     );
   }
@@ -280,11 +280,11 @@ export class TaskMetadataImpl implements TaskMetadata {
    * Gets estimated time in human-readable format
    */
   get estimatedTimeFormatted(): string {
-    if (!this.timeTracking?.estimatedMinutes) return undefined;
-    
+    if (!this.timeTracking?.estimatedMinutes) return 'Not estimated';
+
     const hours = Math.floor(this.timeTracking.estimatedMinutes / 60);
     const minutes = this.timeTracking.estimatedMinutes % 60;
-    
+
     if (hours > 0 && minutes > 0) {
       return `${hours}h ${minutes}m`;
     } else if (hours > 0) {
@@ -298,11 +298,11 @@ export class TaskMetadataImpl implements TaskMetadata {
    * Gets actual time in human-readable format
    */
   get actualTimeFormatted(): string {
-    if (!this.timeTracking?.actualMinutes) return undefined;
-    
+    if (!this.timeTracking?.actualMinutes) return 'No time logged';
+
     const hours = Math.floor(this.timeTracking.actualMinutes / 60);
     const minutes = this.timeTracking.actualMinutes % 60;
-    
+
     if (hours > 0 && minutes > 0) {
       return `${hours}h ${minutes}m`;
     } else if (hours > 0) {
@@ -327,7 +327,7 @@ export class TaskMetadataImpl implements TaskMetadata {
    */
   get timeVariance(): number {
     if (!this.timeTracking?.estimatedMinutes || !this.timeTracking?.actualMinutes) {
-      return undefined;
+      return 0;
     }
     return this.timeTracking.actualMinutes - this.timeTracking.estimatedMinutes;
   }
@@ -446,18 +446,18 @@ export class TaskMetadataImpl implements TaskMetadata {
   withTimeEntry(minutes: number, description?: string): TaskMetadataImpl {
     const currentTracking = this.timeTracking || {};
     const currentEntries = currentTracking.trackingEntries || [];
-    
+
     const newEntry = {
       date: new Date(),
       minutes,
-      description
+      description,
     };
 
     const newTimeTracking = {
       ...currentTracking,
       actualMinutes: (currentTracking.actualMinutes || 0) + minutes,
       lastTrackedDate: new Date(),
-      trackingEntries: [...currentEntries, newEntry]
+      trackingEntries: [...currentEntries, newEntry],
     };
 
     return this.withTimeTracking(newTimeTracking);
@@ -502,7 +502,7 @@ export class TaskMetadataImpl implements TaskMetadata {
   withCustomProperty(key: string, value: any): TaskMetadataImpl {
     const newCustomProperties = {
       ...this.customProperties,
-      [key]: value
+      [key]: value,
     };
 
     return new TaskMetadataImpl(
@@ -572,24 +572,28 @@ export class TaskMetadataImpl implements TaskMetadata {
       isRecurring: this.isRecurring,
       isUserCreated: this.isUserCreated,
       isSystemGenerated: this.isSystemGenerated,
-      recurrence: this.recurrence ? {
-        ...this.recurrence,
-        endDate: this.recurrence.endDate?.toISOString()
-      } : undefined,
-      timeTracking: this.timeTracking ? {
-        ...this.timeTracking,
-        lastTrackedDate: this.timeTracking.lastTrackedDate?.toISOString(),
-        trackingEntries: this.timeTracking.trackingEntries?.map(entry => ({
-          ...entry,
-          date: entry.date.toISOString()
-        }))
-      } : undefined,
+      recurrence: this.recurrence
+        ? {
+            ...this.recurrence,
+            endDate: this.recurrence.endDate?.toISOString(),
+          }
+        : undefined,
+      timeTracking: this.timeTracking
+        ? {
+            ...this.timeTracking,
+            lastTrackedDate: this.timeTracking.lastTrackedDate?.toISOString(),
+            trackingEntries: this.timeTracking.trackingEntries?.map(entry => ({
+              ...entry,
+              date: entry.date.toISOString(),
+            })),
+          }
+        : undefined,
       estimatedTimeFormatted: this.estimatedTimeFormatted,
       actualTimeFormatted: this.actualTimeFormatted,
       isOverEstimate: this.isOverEstimate,
       timeVariance: this.timeVariance,
       customProperties: this.customProperties,
-      extensions: this.extensions
+      extensions: this.extensions,
     };
   }
 
@@ -619,18 +623,24 @@ export class TaskMetadataImpl implements TaskMetadata {
       json.createdBy,
       json.lastModifiedBy,
       json.assignedBy,
-      json.recurrence ? {
-        ...json.recurrence,
-        endDate: json.recurrence.endDate ? new Date(json.recurrence.endDate) : undefined
-      } : undefined,
-      json.timeTracking ? {
-        ...json.timeTracking,
-        lastTrackedDate: json.timeTracking.lastTrackedDate ? new Date(json.timeTracking.lastTrackedDate) : undefined,
-        trackingEntries: json.timeTracking.trackingEntries?.map((entry: any) => ({
-          ...entry,
-          date: new Date(entry.date)
-        }))
-      } : undefined,
+      json.recurrence
+        ? {
+            ...json.recurrence,
+            endDate: json.recurrence.endDate ? new Date(json.recurrence.endDate) : undefined,
+          }
+        : undefined,
+      json.timeTracking
+        ? {
+            ...json.timeTracking,
+            lastTrackedDate: json.timeTracking.lastTrackedDate
+              ? new Date(json.timeTracking.lastTrackedDate)
+              : undefined,
+            trackingEntries: json.timeTracking.trackingEntries?.map((entry: any) => ({
+              ...entry,
+              date: new Date(entry.date),
+            })),
+          }
+        : undefined,
       json.customProperties,
       json.extensions
     );

@@ -2,14 +2,14 @@ import { Logger } from '../../../shared/logging/Logger.js';
 import { SecurityManager } from '../../../shared/security/SecurityManager.js';
 import { ConfigManager } from '../../../shared/config/ConfigManager.js';
 import {
-  PlatformPort,
-  PlatformResult,
-  SearchCriteria,
   BatchOperation,
   BatchResult,
   FreeBusyInfo,
-  TimeSlotSuggestion,
   PlatformConfig,
+  PlatformPort,
+  PlatformResult,
+  SearchCriteria,
+  TimeSlotSuggestion,
 } from '../../../domain/interfaces/PlatformPort.js';
 import { Platform } from '../../../domain/value-objects/Platform.js';
 import { Email } from '../../../domain/entities/Email.js';
@@ -23,15 +23,18 @@ import * as crypto from 'crypto';
 
 // Import Microsoft Graph components
 import {
-  MsalConfig,
-  MsalAuthProvider,
-  TokenRefreshService,
-  GraphClient,
-  RateLimiter,
-  CircuitBreaker,
-  ChromaDbInitializer,
   CacheManager,
+  ChromaDbInitializer,
+  CircuitBreaker,
   ErrorHandler,
+  GraphClient,
+  MsalAuthProvider,
+  MsalConfig,
+  RateLimiter,
+  TokenRefreshService,
+  EmailService,
+  CalendarService,
+  ContactsService,
 } from './index.js';
 
 /**
@@ -53,6 +56,9 @@ export class GraphAdapter implements PlatformPort {
   private chromaDb?: ChromaDbInitializer;
   private cacheManager?: CacheManager;
   private errorHandler?: ErrorHandler;
+  private emailService?: EmailService;
+  private calendarService?: CalendarService;
+  private contactsService?: ContactsService;
   private userId?: string;
 
   constructor(
@@ -151,6 +157,31 @@ export class GraphAdapter implements PlatformPort {
         logErrors: true,
       });
 
+      // Initialize services
+      this.emailService = new EmailService(
+        this.graphClient,
+        this.cacheManager,
+        this.chromaDb,
+        this.errorHandler,
+        this.logger
+      );
+
+      this.calendarService = new CalendarService(
+        this.graphClient,
+        this.cacheManager,
+        this.chromaDb,
+        this.errorHandler,
+        this.logger
+      );
+
+      this.contactsService = new ContactsService(
+        this.graphClient,
+        this.cacheManager,
+        this.chromaDb,
+        this.errorHandler,
+        this.logger
+      );
+
       this.isAvailable = true;
       this.logger.info('Microsoft Graph adapter initialized successfully');
     } catch (error) {
@@ -166,12 +197,9 @@ export class GraphAdapter implements PlatformPort {
   private async generatePKCE(): Promise<{ challenge: string; verifier: string }> {
     // Generate code verifier (43-128 characters)
     const verifier = crypto.randomBytes(32).toString('base64url');
-    
+
     // Generate code challenge from verifier
-    const challenge = crypto
-      .createHash('sha256')
-      .update(verifier)
-      .digest('base64url');
+    const challenge = crypto.createHash('sha256').update(verifier).digest('base64url');
 
     return { challenge, verifier };
   }
@@ -190,7 +218,7 @@ export class GraphAdapter implements PlatformPort {
     if (!this.authProvider) {
       throw new Error('Auth provider not initialized');
     }
-    
+
     // Use the auth provider's method but with our PKCE challenge
     return this.authProvider.getAuthorizationUrl(
       ['Calendars.ReadWrite', 'Mail.Read', 'Mail.Send', 'User.Read'],
@@ -231,23 +259,23 @@ export class GraphAdapter implements PlatformPort {
 
       // Generate PKCE challenge and verifier
       const { challenge, verifier } = await this.generatePKCE();
-      
+
       // Generate secure state
       const state = this.generateSecureState();
-      
+
       // Build authorization URL with PKCE
       const authUrl = await this.buildAuthUrl(challenge, state);
-      
+
       // Store PKCE verifier and state securely
       await this.securityManager.storeSecureData('pkce_verifier', verifier);
       await this.securityManager.storeSecureData('oauth_state', state);
-      
+
       this.logger.info('OAuth2 authorization URL generated with PKCE', {
         hasChallenge: !!challenge,
         hasState: !!state,
-        userId: this.userId
+        userId: this.userId,
       });
-      
+
       // Return the auth URL for the user to navigate to
       // In a real implementation, the application would redirect the user to this URL
       return authUrl;
@@ -272,39 +300,39 @@ export class GraphAdapter implements PlatformPort {
       if (!savedState || state !== savedState) {
         throw new Error('Invalid state parameter - possible CSRF attack');
       }
-      
+
       // Retrieve PKCE verifier
       const verifier = await this.securityManager.getSecureData('pkce_verifier');
       if (!verifier) {
         throw new Error('PKCE verifier not found');
       }
-      
+
       // Set the verifier in auth provider before code exchange
       // The auth provider stores the verifier internally for the exchange
       await this.authProvider.getAuthorizationUrl(); // This sets up PKCE
-      
+
       // Exchange authorization code for tokens
       const tokens = await this.authProvider.acquireTokenByCode(code);
-      
+
       // Store tokens securely
       if (this.userId) {
         await this.tokenService.storeTokens(tokens, this.userId);
       }
-      
+
       // Clean up temporary data
       await this.securityManager.deleteSecureData('pkce_verifier');
       await this.securityManager.deleteSecureData('oauth_state');
-      
+
       // Initialize Graph client with access token
       this.graphClient = this.createGraphClient(tokens.accessToken);
       this.isAuthenticated = true;
-      
+
       this.logger.info('Successfully authenticated with Microsoft Graph', {
         userId: this.userId,
         hasRefreshToken: !!tokens.refreshToken,
-        expiresOn: tokens.expiresOn
+        expiresOn: tokens.expiresOn,
       });
-      
+
       return true;
     } catch (error) {
       this.logger.error('Authentication callback failed', error);
@@ -336,10 +364,7 @@ export class GraphAdapter implements PlatformPort {
         return false;
       }
 
-      const refreshed = await this.tokenService.refreshTokens(
-        tokens.refreshToken,
-        tokens.scopes
-      );
+      const refreshed = await this.tokenService.refreshTokens(tokens.refreshToken, tokens.scopes);
 
       await this.tokenService.storeTokens(refreshed, this.userId);
       return true;
@@ -426,59 +451,164 @@ export class GraphAdapter implements PlatformPort {
 
   // Calendar operations
   async fetchEvents(criteria: SearchCriteria): Promise<PlatformResult<CalendarEvent[]>> {
-    // Implementation will be added in Phase 3
-    return {
-      success: false,
-      error: 'Not implemented yet',
-    };
+    try {
+      if (!this.calendarService) {
+        throw new Error('Calendar service not initialized');
+      }
+
+      const options = {
+        query: criteria.query,
+        dateFrom: criteria.dateRange?.start,
+        dateTo: criteria.dateRange?.end,
+        limit: criteria.limit,
+        skip: criteria.offset,
+      };
+
+      const result = await this.calendarService.searchEvents(options);
+      if (result.success && result.data) {
+        return {
+          success: true,
+          data: result.data.events,
+          pagination: result.pagination,
+        };
+      }
+
+      return {
+        success: false,
+        error: result.error || 'Search failed',
+      };
+    } catch (error) {
+      this.logger.error('Failed to fetch events', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
   }
 
   async getEvent(id: string): Promise<PlatformResult<CalendarEvent>> {
-    // Implementation will be added in Phase 3
-    return {
-      success: false,
-      error: 'Not implemented yet',
-    };
+    try {
+      if (!this.calendarService) {
+        throw new Error('Calendar service not initialized');
+      }
+
+      return await this.calendarService.getEvent(id);
+    } catch (error) {
+      this.logger.error(`Failed to get event ${id}`, error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
   }
 
   async createEvent(event: Partial<CalendarEvent>): Promise<PlatformResult<string>> {
-    // Implementation will be added in Phase 3
-    return {
-      success: false,
-      error: 'Not implemented yet',
-    };
+    try {
+      if (!this.calendarService) {
+        throw new Error('Calendar service not initialized');
+      }
+
+      return await this.calendarService.createEvent(event);
+    } catch (error) {
+      this.logger.error('Failed to create event', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
   }
 
-  async updateEvent(id: string, updates: Partial<CalendarEvent>): Promise<PlatformResult<CalendarEvent>> {
-    // Implementation will be added in Phase 3
-    return {
-      success: false,
-      error: 'Not implemented yet',
-    };
+  async updateEvent(
+    id: string,
+    updates: Partial<CalendarEvent>
+  ): Promise<PlatformResult<CalendarEvent>> {
+    try {
+      if (!this.calendarService) {
+        throw new Error('Calendar service not initialized');
+      }
+
+      return await this.calendarService.updateEvent(id, updates);
+    } catch (error) {
+      this.logger.error(`Failed to update event ${id}`, error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
   }
 
   async deleteEvent(id: string): Promise<PlatformResult<boolean>> {
-    // Implementation will be added in Phase 3
-    return {
-      success: false,
-      error: 'Not implemented yet',
-    };
+    try {
+      if (!this.calendarService) {
+        throw new Error('Calendar service not initialized');
+      }
+
+      return await this.calendarService.deleteEvent(id);
+    } catch (error) {
+      this.logger.error(`Failed to delete event ${id}`, error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
   }
 
-  async searchEvents(query: string, criteria?: SearchCriteria): Promise<PlatformResult<CalendarEvent[]>> {
-    // Implementation will be added in Phase 3
-    return {
-      success: false,
-      error: 'Not implemented yet',
-    };
+  async searchEvents(
+    query: string,
+    criteria?: SearchCriteria
+  ): Promise<PlatformResult<CalendarEvent[]>> {
+    try {
+      if (!this.calendarService) {
+        throw new Error('Calendar service not initialized');
+      }
+
+      const options = {
+        query,
+        dateFrom: criteria?.dateRange?.start,
+        dateTo: criteria?.dateRange?.end,
+        limit: criteria?.limit,
+        skip: criteria?.offset,
+      };
+
+      const result = await this.calendarService.searchEvents(options);
+      if (result.success && result.data) {
+        return {
+          success: true,
+          data: result.data.events,
+          pagination: result.pagination,
+        };
+      }
+
+      return {
+        success: false,
+        error: result.error || 'Search failed',
+      };
+    } catch (error) {
+      this.logger.error('Failed to search events', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
   }
 
-  async getFreeBusyInfo(emails: EmailAddress[], dateRange: DateRange): Promise<PlatformResult<FreeBusyInfo[]>> {
-    // Implementation will be added in Phase 3
-    return {
-      success: false,
-      error: 'Not implemented yet',
-    };
+  async getFreeBusyInfo(
+    emails: EmailAddress[],
+    dateRange: DateRange
+  ): Promise<PlatformResult<FreeBusyInfo[]>> {
+    try {
+      if (!this.calendarService) {
+        throw new Error('Calendar service not initialized');
+      }
+
+      return await this.calendarService.getFreeBusy(emails, dateRange);
+    } catch (error) {
+      this.logger.error('Failed to get free/busy info', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
   }
 
   async findFreeTime(
@@ -487,14 +617,29 @@ export class GraphAdapter implements PlatformPort {
     dateRange: DateRange,
     options?: { workingHoursOnly?: boolean; minConfidence?: number; maxSuggestions?: number }
   ): Promise<PlatformResult<TimeSlotSuggestion[]>> {
-    // Implementation will be added in Phase 3
-    return {
-      success: false,
-      error: 'Not implemented yet',
-    };
+    try {
+      if (!this.calendarService) {
+        throw new Error('Calendar service not initialized');
+      }
+
+      const freeTimeOptions = {
+        workingHoursOnly: options?.workingHoursOnly,
+        maxSuggestions: options?.maxSuggestions,
+      };
+
+      return await this.calendarService.findFreeTime(attendees, duration, dateRange, freeTimeOptions);
+    } catch (error) {
+      this.logger.error('Failed to find free time', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
   }
 
-  async batchEventOperations(operations: BatchOperation<CalendarEvent>[]): Promise<BatchResult<CalendarEvent>> {
+  async batchEventOperations(
+    operations: BatchOperation<CalendarEvent>[]
+  ): Promise<BatchResult<CalendarEvent>> {
     // Implementation will be added in Phase 3
     return {
       success: false,
@@ -505,54 +650,141 @@ export class GraphAdapter implements PlatformPort {
 
   // Contact operations
   async fetchContacts(criteria: SearchCriteria): Promise<PlatformResult<Contact[]>> {
-    // Implementation will be added in Phase 4
-    return {
-      success: false,
-      error: 'Not implemented yet',
-    };
+    try {
+      if (!this.contactsService) {
+        throw new Error('Contacts service not initialized');
+      }
+
+      const result = await this.contactsService.searchContacts({
+        query: criteria.query,
+        limit: criteria.limit,
+        skip: criteria.offset,
+      });
+
+      if (result.success && result.data) {
+        return {
+          success: true,
+          data: result.data.contacts,
+          pagination: result.pagination,
+        };
+      }
+
+      return {
+        success: false,
+        error: 'No contacts found',
+      };
+    } catch (error) {
+      this.logger.error('Failed to fetch contacts', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to fetch contacts',
+      };
+    }
   }
 
   async getContact(id: string): Promise<PlatformResult<Contact>> {
-    // Implementation will be added in Phase 4
-    return {
-      success: false,
-      error: 'Not implemented yet',
-    };
+    try {
+      if (!this.contactsService) {
+        throw new Error('Contacts service not initialized');
+      }
+
+      return await this.contactsService.getContact(id);
+    } catch (error) {
+      this.logger.error(`Failed to get contact ${id}`, error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to get contact',
+      };
+    }
   }
 
   async createContact(contact: Partial<Contact>): Promise<PlatformResult<string>> {
-    // Implementation will be added in Phase 4
-    return {
-      success: false,
-      error: 'Not implemented yet',
-    };
+    try {
+      if (!this.contactsService) {
+        throw new Error('Contacts service not initialized');
+      }
+
+      return await this.contactsService.createContact(contact);
+    } catch (error) {
+      this.logger.error('Failed to create contact', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to create contact',
+      };
+    }
   }
 
   async updateContact(id: string, updates: Partial<Contact>): Promise<PlatformResult<Contact>> {
-    // Implementation will be added in Phase 4
-    return {
-      success: false,
-      error: 'Not implemented yet',
-    };
+    try {
+      if (!this.contactsService) {
+        throw new Error('Contacts service not initialized');
+      }
+
+      return await this.contactsService.updateContact(id, updates);
+    } catch (error) {
+      this.logger.error(`Failed to update contact ${id}`, error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to update contact',
+      };
+    }
   }
 
   async deleteContact(id: string): Promise<PlatformResult<boolean>> {
-    // Implementation will be added in Phase 4
-    return {
-      success: false,
-      error: 'Not implemented yet',
-    };
+    try {
+      if (!this.contactsService) {
+        throw new Error('Contacts service not initialized');
+      }
+
+      return await this.contactsService.deleteContact(id);
+    } catch (error) {
+      this.logger.error(`Failed to delete contact ${id}`, error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to delete contact',
+      };
+    }
   }
 
-  async searchContacts(query: string, criteria?: SearchCriteria): Promise<PlatformResult<Contact[]>> {
-    // Implementation will be added in Phase 4
-    return {
-      success: false,
-      error: 'Not implemented yet',
-    };
+  async searchContacts(
+    query: string,
+    criteria?: SearchCriteria
+  ): Promise<PlatformResult<Contact[]>> {
+    try {
+      if (!this.contactsService) {
+        throw new Error('Contacts service not initialized');
+      }
+
+      const result = await this.contactsService.searchContacts({
+        query,
+        limit: criteria?.limit,
+        skip: criteria?.offset,
+      });
+
+      if (result.success && result.data) {
+        return {
+          success: true,
+          data: result.data.contacts,
+          pagination: result.pagination,
+        };
+      }
+
+      return {
+        success: false,
+        error: 'No contacts found',
+      };
+    } catch (error) {
+      this.logger.error('Failed to search contacts', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to search contacts',
+      };
+    }
   }
 
-  async batchContactOperations(operations: BatchOperation<Contact>[]): Promise<BatchResult<Contact>> {
+  async batchContactOperations(
+    operations: BatchOperation<Contact>[]
+  ): Promise<BatchResult<Contact>> {
     // Implementation will be added in Phase 4
     return {
       success: false,
@@ -724,7 +956,7 @@ export class GraphAdapter implements PlatformPort {
   > {
     try {
       const startTime = Date.now();
-      
+
       if (!this.graphClient) {
         return {
           success: true,

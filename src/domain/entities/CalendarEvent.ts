@@ -142,11 +142,12 @@ export class CalendarEventEntity implements CalendarEvent {
   /**
    * Updates attendee response status
    */
-  updateAttendeeResponse(email: EmailAddress, response: 'accepted' | 'tentative' | 'declined'): CalendarEventEntity {
+  updateAttendeeResponse(
+    email: EmailAddress,
+    response: 'accepted' | 'tentative' | 'declined'
+  ): CalendarEventEntity {
     const updatedAttendees = this.attendees.map(attendee =>
-      attendee.email.equals(email) 
-        ? { ...attendee, responseStatus: response }
-        : attendee
+      attendee.email.equals(email) ? { ...attendee, responseStatus: response } : attendee
     );
 
     return new CalendarEventEntity(
@@ -264,12 +265,14 @@ export class CalendarEventEntity implements CalendarEvent {
       location: this.location,
       attendees: this.attendees.map(attendee => ({
         ...attendee,
-        email: attendee.email.toJSON()
+        email: attendee.email.toJSON(),
       })),
-      organizer: this.organizer ? {
-        ...this.organizer,
-        email: this.organizer.email.toJSON()
-      } : undefined,
+      organizer: this.organizer
+        ? {
+            ...this.organizer,
+            email: this.organizer.email.toJSON(),
+          }
+        : undefined,
       recurrence: this.recurrence,
       categories: this.categories,
       showAs: this.showAs,
@@ -284,7 +287,7 @@ export class CalendarEventEntity implements CalendarEvent {
       durationMinutes: this.durationMinutes,
       isRecurring: this.isRecurring,
       isPartOfSeries: this.isPartOfSeries,
-      metadata: this.metadata
+      metadata: this.metadata,
     };
   }
 }

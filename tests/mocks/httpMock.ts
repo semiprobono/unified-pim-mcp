@@ -3,15 +3,15 @@
  */
 
 import nock from 'nock';
-import { 
-  mockUserProfile, 
-  mockMessagesResponse, 
-  mockGraphError401, 
+import {
+  createMockHeaders,
+  mockGraphError401,
   mockGraphError429,
   mockGraphError500,
-  mockRateLimitHeaders,
+  mockMessagesResponse,
   mockRateLimitExceededHeaders,
-  createMockHeaders
+  mockRateLimitHeaders,
+  mockUserProfile,
 } from '../fixtures/graphApiResponses.js';
 
 /**
@@ -38,11 +38,11 @@ export class HttpMockManager {
     const scope = nock(this.baseUrl)
       .get(endpoint)
       .reply(response.status, response.body, response.headers);
-    
+
     if (response.delay) {
       scope.delay(response.delay);
     }
-    
+
     this.scopes.push(scope);
     return scope;
   }
@@ -54,11 +54,11 @@ export class HttpMockManager {
     const scope = nock(this.baseUrl)
       .post(endpoint, requestBody)
       .reply(response.status, response.body, response.headers);
-    
+
     if (response.delay) {
       scope.delay(response.delay);
     }
-    
+
     this.scopes.push(scope);
     return scope;
   }
@@ -70,11 +70,11 @@ export class HttpMockManager {
     const scope = nock(this.baseUrl)
       .put(endpoint, requestBody)
       .reply(response.status, response.body, response.headers);
-    
+
     if (response.delay) {
       scope.delay(response.delay);
     }
-    
+
     this.scopes.push(scope);
     return scope;
   }
@@ -86,11 +86,11 @@ export class HttpMockManager {
     const scope = nock(this.baseUrl)
       .patch(endpoint, requestBody)
       .reply(response.status, response.body, response.headers);
-    
+
     if (response.delay) {
       scope.delay(response.delay);
     }
-    
+
     this.scopes.push(scope);
     return scope;
   }
@@ -102,11 +102,11 @@ export class HttpMockManager {
     const scope = nock(this.baseUrl)
       .delete(endpoint)
       .reply(response.status, response.body, response.headers);
-    
+
     if (response.delay) {
       scope.delay(response.delay);
     }
-    
+
     this.scopes.push(scope);
     return scope;
   }
@@ -114,9 +114,14 @@ export class HttpMockManager {
   /**
    * Mock request with authentication header validation
    */
-  mockAuthenticatedRequest(method: string, endpoint: string, response: MockHttpResponse, expectedToken?: string): nock.Scope {
+  mockAuthenticatedRequest(
+    method: string,
+    endpoint: string,
+    response: MockHttpResponse,
+    expectedToken?: string
+  ): nock.Scope {
     let scope = nock(this.baseUrl);
-    
+
     if (expectedToken) {
       scope = scope.matchHeader('Authorization', `Bearer ${expectedToken}`);
     } else {
@@ -133,11 +138,11 @@ export class HttpMockManager {
 
     scope = methodMap[method.toUpperCase()](endpoint);
     scope.reply(response.status, response.body, response.headers);
-    
+
     if (response.delay) {
       scope.delay(response.delay);
     }
-    
+
     this.scopes.push(scope);
     return scope;
   }
@@ -150,7 +155,7 @@ export class HttpMockManager {
       .get(endpoint)
       .delay(timeoutMs + 1000)
       .reply(200, {});
-    
+
     this.scopes.push(scope);
     return scope;
   }
@@ -162,7 +167,7 @@ export class HttpMockManager {
     const scope = nock(this.baseUrl)
       .get(endpoint)
       .replyWithError({ code: errorCode, message: 'Network error' });
-    
+
     this.scopes.push(scope);
     return scope;
   }
@@ -177,7 +182,7 @@ export class HttpMockManager {
         ...mockRateLimitExceededHeaders,
         'retry-after': retryAfterSeconds.toString(),
       });
-    
+
     this.scopes.push(scope);
     return scope;
   }
@@ -187,23 +192,21 @@ export class HttpMockManager {
    */
   mockServerErrorWithRetries(endpoint: string, failCount: number = 2): nock.Scope[] {
     const scopes: nock.Scope[] = [];
-    
+
     // Mock failures
     for (let i = 0; i < failCount; i++) {
-      const scope = nock(this.baseUrl)
-        .get(endpoint)
-        .reply(500, mockGraphError500);
+      const scope = nock(this.baseUrl).get(endpoint).reply(500, mockGraphError500);
       scopes.push(scope);
       this.scopes.push(scope);
     }
-    
+
     // Mock final success
     const successScope = nock(this.baseUrl)
       .get(endpoint)
       .reply(200, mockUserProfile, createMockHeaders());
     scopes.push(successScope);
     this.scopes.push(successScope);
-    
+
     return scopes;
   }
 
@@ -214,7 +217,7 @@ export class HttpMockManager {
     const scope = nock(this.baseUrl)
       .post('/$batch', { requests })
       .reply(200, { responses }, createMockHeaders());
-    
+
     this.scopes.push(scope);
     return scope;
   }
@@ -224,49 +227,53 @@ export class HttpMockManager {
    */
   mockPaginatedResponse(baseEndpoint: string, pages: any[], pageSize: number = 10): nock.Scope[] {
     const scopes: nock.Scope[] = [];
-    
+
     pages.forEach((pageData, index) => {
       const isLastPage = index === pages.length - 1;
       const endpoint = index === 0 ? baseEndpoint : `${baseEndpoint}?$skip=${index * pageSize}`;
-      const nextLink = isLastPage ? undefined : `${this.baseUrl}${baseEndpoint}?$skip=${(index + 1) * pageSize}`;
-      
+      const nextLink = isLastPage
+        ? undefined
+        : `${this.baseUrl}${baseEndpoint}?$skip=${(index + 1) * pageSize}`;
+
       const response = {
         value: pageData,
         ...(nextLink && { '@odata.nextLink': nextLink }),
       };
-      
-      const scope = nock(this.baseUrl)
-        .get(endpoint)
-        .reply(200, response, createMockHeaders());
-      
+
+      const scope = nock(this.baseUrl).get(endpoint).reply(200, response, createMockHeaders());
+
       scopes.push(scope);
       this.scopes.push(scope);
     });
-    
+
     return scopes;
   }
 
   /**
    * Mock file upload session
    */
-  mockFileUploadSession(sessionUrl: string, fileSize: number, chunkSize: number = 5 * 1024 * 1024): nock.Scope[] {
+  mockFileUploadSession(
+    sessionUrl: string,
+    fileSize: number,
+    chunkSize: number = 5 * 1024 * 1024
+  ): nock.Scope[] {
     const scopes: nock.Scope[] = [];
     const chunks = Math.ceil(fileSize / chunkSize);
-    
+
     for (let i = 0; i < chunks; i++) {
       const start = i * chunkSize;
       const end = Math.min(start + chunkSize - 1, fileSize - 1);
       const isLastChunk = i === chunks - 1;
-      
+
       const scope = nock(sessionUrl)
         .put('/')
         .matchHeader('Content-Range', `bytes ${start}-${end}/${fileSize}`)
         .reply(isLastChunk ? 201 : 202, isLastChunk ? { id: 'uploaded-file-id' } : {});
-      
+
       scopes.push(scope);
       this.scopes.push(scope);
     }
-    
+
     return scopes;
   }
 
@@ -310,17 +317,19 @@ export const httpMockScenarios = {
    * Successful Graph API requests
    */
   success: {
-    userProfile: () => httpMockManager.mockGet('/v1.0/me', {
-      status: 200,
-      body: mockUserProfile,
-      headers: createMockHeaders(),
-    }),
-    
-    messages: () => httpMockManager.mockGet('/v1.0/me/messages', {
-      status: 200,
-      body: mockMessagesResponse,
-      headers: createMockHeaders(),
-    }),
+    userProfile: () =>
+      httpMockManager.mockGet('/v1.0/me', {
+        status: 200,
+        body: mockUserProfile,
+        headers: createMockHeaders(),
+      }),
+
+    messages: () =>
+      httpMockManager.mockGet('/v1.0/me/messages', {
+        status: 200,
+        body: mockMessagesResponse,
+        headers: createMockHeaders(),
+      }),
   },
 
   /**
@@ -328,12 +337,17 @@ export const httpMockScenarios = {
    */
   auth: {
     validToken: (endpoint: string = '/v1.0/me', token: string = 'valid-token') =>
-      httpMockManager.mockAuthenticatedRequest('GET', endpoint, {
-        status: 200,
-        body: mockUserProfile,
-        headers: createMockHeaders(),
-      }, token),
-    
+      httpMockManager.mockAuthenticatedRequest(
+        'GET',
+        endpoint,
+        {
+          status: 200,
+          body: mockUserProfile,
+          headers: createMockHeaders(),
+        },
+        token
+      ),
+
     invalidToken: (endpoint: string = '/v1.0/me') =>
       httpMockManager.mockGet(endpoint, {
         status: 401,
@@ -348,17 +362,16 @@ export const httpMockScenarios = {
   errors: {
     rateLimited: (endpoint: string = '/v1.0/me', retryAfter: number = 300) =>
       httpMockManager.mockRateLimit(endpoint, retryAfter),
-    
+
     serverError: (endpoint: string = '/v1.0/me') =>
       httpMockManager.mockGet(endpoint, {
         status: 500,
         body: mockGraphError500,
         headers: createMockHeaders(),
       }),
-    
-    networkError: (endpoint: string = '/v1.0/me') =>
-      httpMockManager.mockNetworkError(endpoint),
-    
+
+    networkError: (endpoint: string = '/v1.0/me') => httpMockManager.mockNetworkError(endpoint),
+
     timeout: (endpoint: string = '/v1.0/me', timeoutMs: number = 30000) =>
       httpMockManager.mockTimeout(endpoint, timeoutMs),
   },
@@ -374,7 +387,7 @@ export const httpMockScenarios = {
         headers: createMockHeaders(),
         delay: delayMs,
       }),
-    
+
     variableLatency: (endpoint: string = '/v1.0/me', delays: number[] = [100, 500, 1000]) => {
       return delays.map(delay =>
         httpMockManager.mockGet(endpoint, {
@@ -393,7 +406,7 @@ export const httpMockScenarios = {
   resilience: {
     eventualSuccess: (endpoint: string = '/v1.0/me', failureCount: number = 2) =>
       httpMockManager.mockServerErrorWithRetries(endpoint, failureCount),
-    
+
     intermittentFailures: (endpoint: string = '/v1.0/me') => {
       // Mock pattern: success, failure, success, failure
       return [
@@ -441,10 +454,10 @@ export const httpTestUtils = {
   },
 
   expectRequest: (method: string, endpoint: string, expectedBody?: any) => {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       const scope = nock('https://graph.microsoft.com')
         [method.toLowerCase() as keyof nock.Interceptor](endpoint, expectedBody)
-        .reply(function(uri, requestBody) {
+        .reply(function (uri, requestBody) {
           resolve({ uri, requestBody, headers: this.req.headers });
           return [200, {}];
         });

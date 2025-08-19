@@ -1,4 +1,4 @@
-import { AuthenticationResult, AccountInfo } from '@azure/msal-node';
+import { AccountInfo, AuthenticationResult } from '@azure/msal-node';
 
 /**
  * Mock MSAL authentication responses for testing
@@ -103,7 +103,8 @@ export const mockMsalConfig = {
 /**
  * Mock authorization URL
  */
-export const mockAuthorizationUrl = 'https://login.microsoftonline.com/test-tenant-id/oauth2/v2.0/authorize?client_id=test-client-id&response_type=code&redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Fauth%2Fcallback&response_mode=query&scope=https%3A%2F%2Fgraph.microsoft.com%2FUser.Read%20https%3A%2F%2Fgraph.microsoft.com%2FMail.Read&state=test-state&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&code_challenge_method=S256&prompt=select_account';
+export const mockAuthorizationUrl =
+  'https://login.microsoftonline.com/test-tenant-id/oauth2/v2.0/authorize?client_id=test-client-id&response_type=code&redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Fauth%2Fcallback&response_mode=query&scope=https%3A%2F%2Fgraph.microsoft.com%2FUser.Read%20https%3A%2F%2Fgraph.microsoft.com%2FMail.Read&state=test-state&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&code_challenge_method=S256&prompt=select_account';
 
 /**
  * Mock error responses
@@ -112,7 +113,8 @@ export const mockInteractionRequiredError = {
   name: 'InteractionRequiredAuthError',
   message: 'Interaction required',
   errorCode: 'interaction_required',
-  errorMessage: 'AADSTS50076: Due to a configuration change made by your administrator, or because you moved to a new location, you must use multi-factor authentication to access.',
+  errorMessage:
+    'AADSTS50076: Due to a configuration change made by your administrator, or because you moved to a new location, you must use multi-factor authentication to access.',
   correlationId: 'test-correlation-id',
   subError: 'basic_action',
 };
@@ -121,7 +123,8 @@ export const mockInvalidGrantError = {
   name: 'ServerError',
   message: 'Invalid grant',
   errorCode: 'invalid_grant',
-  errorMessage: 'AADSTS70008: The provided authorization code or refresh token is expired or revoked.',
+  errorMessage:
+    'AADSTS70008: The provided authorization code or refresh token is expired or revoked.',
   correlationId: 'test-correlation-id',
 };
 
@@ -187,7 +190,9 @@ export const mockPersonalAccount: AccountInfo = {
 /**
  * Helper function to create mock authentication result with custom properties
  */
-export function createMockAuthResult(overrides: Partial<AuthenticationResult>): AuthenticationResult {
+export function createMockAuthResult(
+  overrides: Partial<AuthenticationResult>
+): AuthenticationResult {
   return {
     ...mockAuthenticationResult,
     ...overrides,

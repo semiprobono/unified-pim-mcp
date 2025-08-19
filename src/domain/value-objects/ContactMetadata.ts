@@ -28,8 +28,8 @@ export interface ContactMetadata {
   readonly lastSyncTime: Date;
   readonly isReadOnly: boolean;
   readonly source: 'user' | 'directory' | 'facebook' | 'gmail' | 'outlook' | 'linkedIn' | 'other';
-  readonly confidence?: number | undefined; // For ML-detected contacts 
-  readonly duplicateContacts?: string[] | undefined; // IDs of potential duplicates 
+  readonly confidence?: number | undefined; // For ML-detected contacts
+  readonly duplicateContacts?: string[] | undefined; // IDs of potential duplicates
   readonly customProperties?: Record<string, any> | undefined;
   readonly extensions?: Array<{
     extensionName: string;
@@ -46,7 +46,14 @@ export class ContactMetadataImpl implements ContactMetadata {
     public readonly lastModifiedTime: Date,
     public readonly lastSyncTime: Date,
     public readonly isReadOnly: boolean,
-    public readonly source: 'user' | 'directory' | 'facebook' | 'gmail' | 'outlook' | 'linkedIn' | 'other',
+    public readonly source:
+      | 'user'
+      | 'directory'
+      | 'facebook'
+      | 'gmail'
+      | 'outlook'
+      | 'linkedIn'
+      | 'other',
     public readonly parentFolderId?: string,
     public readonly folderName?: string,
     public readonly webLink?: string,
@@ -235,7 +242,7 @@ export class ContactMetadataImpl implements ContactMetadata {
    */
   get confidenceLevel(): 'high' | 'medium' | 'low' | undefined {
     if (this.confidence === undefined) return undefined;
-    
+
     if (this.confidence >= 0.8) return 'high';
     if (this.confidence >= 0.5) return 'medium';
     return 'low';
@@ -274,12 +281,7 @@ export class ContactMetadataImpl implements ContactMetadata {
    * Checks if contact has personal information
    */
   get hasPersonalInfo(): boolean {
-    return !!(
-      this.spouseName ||
-      this.children?.length ||
-      this.personalNotes ||
-      this.nickName
-    );
+    return !!(this.spouseName || this.children?.length || this.personalNotes || this.nickName);
   }
 
   /**
@@ -491,7 +493,7 @@ export class ContactMetadataImpl implements ContactMetadata {
   withCustomProperty(key: string, value: any): ContactMetadataImpl {
     const newCustomProperties = {
       ...this.customProperties,
-      [key]: value
+      [key]: value,
     };
 
     return new ContactMetadataImpl(
@@ -533,9 +535,7 @@ export class ContactMetadataImpl implements ContactMetadata {
    * Gets specific extension data
    */
   getExtension(extensionName: string, id: string): Record<string, any> | undefined {
-    return this.extensions?.find(
-      ext => ext.extensionName === extensionName && ext.id === id
-    )?.data;
+    return this.extensions?.find(ext => ext.extensionName === extensionName && ext.id === id)?.data;
   }
 
   /**
@@ -585,7 +585,7 @@ export class ContactMetadataImpl implements ContactMetadata {
       hasBusinessInfo: this.hasBusinessInfo,
       hasPersonalInfo: this.hasPersonalInfo,
       customProperties: this.customProperties,
-      extensions: this.extensions
+      extensions: this.extensions,
     };
   }
 

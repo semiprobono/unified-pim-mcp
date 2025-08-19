@@ -1,29 +1,29 @@
-import { describe, test, expect, beforeAll, afterAll, beforeEach, afterEach } from '@jest/globals';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from '@jest/globals';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { 
-  CallToolRequestSchema, 
-  ListToolsRequestSchema, 
+import {
+  CallToolRequestSchema,
+  ErrorCode,
   ListResourcesRequestSchema,
-  ReadResourceRequestSchema,
+  ListToolsRequestSchema,
   McpError,
-  ErrorCode
+  ReadResourceRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
-import { UnifiedPIMServer } from '../../src/infrastructure/mcp/server/UnifiedPIMServer.js';
-import { UnifiedPIMMain } from '../../src/index.js';
-import { PlatformAdapterManager } from '../../src/infrastructure/adapters/PlatformAdapterManager.js';
-import { GraphAdapter } from '../../src/infrastructure/adapters/microsoft/GraphAdapter.js';
-import { SecurityManager } from '../../src/shared/security/SecurityManager.js';
-import { ConfigManager } from '../../src/shared/config/ConfigManager.js';
-import { Logger } from '../../src/shared/logging/Logger.js';
-import { CacheManager } from '../../src/infrastructure/cache/CacheManager.js';
-import { ResilienceManager } from '../../src/shared/resilience/ResilienceManager.js';
-import { ErrorHandler } from '../../src/shared/error/ErrorHandler.js';
-import { testConfig } from './setup.integration.js';
-import { createMockMsalApp, createMockTokenResponse } from '../mocks/msalMock.js';
+import { UnifiedPIMServer } from '../../src/infrastructure/mcp/server/UnifiedPIMServer';
+import { UnifiedPIMMain } from '../../src/index';
+import { PlatformAdapterManager } from '../../src/infrastructure/adapters/PlatformAdapterManager';
+import { GraphAdapter } from '../../src/infrastructure/adapters/microsoft/GraphAdapter';
+import { SecurityManager } from '../../src/shared/security/SecurityManager';
+import { ConfigManager } from '../../src/shared/config/ConfigManager';
+import { Logger } from '../../src/shared/logging/Logger';
+import { CacheManager } from '../../src/infrastructure/cache/CacheManager';
+import { ResilienceManager } from '../../src/shared/resilience/ResilienceManager';
+import { ErrorHandler } from '../../src/shared/error/ErrorHandler';
+import { testConfig } from './setup.integration';
+import { createMockMsalApp, createMockTokenResponse } from '../mocks/msalMock';
 
 /**
  * MCP Protocol Integration Tests
- * 
+ *
  * Tests all MCP tools and protocol compliance:
  * 1. Tool registration and schema validation
  * 2. Parameter validation and error handling
@@ -56,22 +56,13 @@ describe('MCP Protocol Integration Tests', () => {
 
     errorHandler = new ErrorHandler(logger);
 
-    securityManager = new SecurityManager(
-      configManager.getConfig('security'),
-      logger
-    );
+    securityManager = new SecurityManager(configManager.getConfig('security'), logger);
     await securityManager.initialize();
 
-    resilienceManager = new ResilienceManager(
-      configManager.getConfig('resilience'),
-      logger
-    );
+    resilienceManager = new ResilienceManager(configManager.getConfig('resilience'), logger);
     await resilienceManager.initialize();
 
-    cacheManager = new CacheManager(
-      configManager.getConfig('cache'),
-      logger
-    );
+    cacheManager = new CacheManager(configManager.getConfig('cache'), logger);
     await cacheManager.initialize();
 
     platformManager = new PlatformAdapterManager(
@@ -139,7 +130,7 @@ describe('MCP Protocol Integration Tests', () => {
     });
 
     // Call tool handler
-    mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
+    mcpServer.setRequestHandler(CallToolRequestSchema, async request => {
       const { name, arguments: args } = request.params;
       const result = await pimServer.executeTool(name, args || {});
       return result;
@@ -152,7 +143,7 @@ describe('MCP Protocol Integration Tests', () => {
     });
 
     // Read resource handler
-    mcpServer.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+    mcpServer.setRequestHandler(ReadResourceRequestSchema, async request => {
       const { uri } = request.params;
       const contents = await pimServer.readResource(uri);
       return { contents };
@@ -160,19 +151,14 @@ describe('MCP Protocol Integration Tests', () => {
   }
 
   async function callTool(name: string, args: any = {}): Promise<any> {
-    const request = {
-      method: 'tools/call',
-      params: { name, arguments: args }
-    };
-    
-    const handler = mcpServer.getRequestHandler(CallToolRequestSchema);
-    return await handler(request as any);
+    // In the new MCP SDK, we simulate a tool call by directly calling the PIM server
+    return await pimServer.executeTool(name, args);
   }
 
   async function listTools(): Promise<any> {
-    const request = { method: 'tools/list', params: {} };
-    const handler = mcpServer.getRequestHandler(ListToolsRequestSchema);
-    return await handler(request as any);
+    // In the new MCP SDK, we get tools directly from the PIM server
+    const tools = await pimServer.getAvailableTools();
+    return { tools };
   }
 
   describe('Tool Registration and Discovery', () => {
@@ -195,8 +181,12 @@ describe('MCP Protocol Integration Tests', () => {
       expect(emailTools).toHaveLength(6);
       expect(emailTools.map(t => t.name)).toEqual(
         expect.arrayContaining([
-          'pim_email_search', 'pim_email_get', 'pim_email_send',
-          'pim_email_reply', 'pim_email_mark_read', 'pim_email_delete'
+          'pim_email_search',
+          'pim_email_get',
+          'pim_email_send',
+          'pim_email_reply',
+          'pim_email_mark_read',
+          'pim_email_delete',
         ])
       );
 
@@ -220,14 +210,14 @@ describe('MCP Protocol Integration Tests', () => {
 
       response.tools.forEach(tool => {
         const schema = tool.inputSchema;
-        
+
         // Basic schema validation
         expect(schema.type).toBe('object');
         expect(typeof schema.properties).toBe('object');
-        
+
         if (schema.required) {
           expect(Array.isArray(schema.required)).toBe(true);
-          
+
           // All required properties should exist in properties
           schema.required.forEach(reqProp => {
             expect(schema.properties[reqProp]).toBeDefined();
@@ -237,11 +227,11 @@ describe('MCP Protocol Integration Tests', () => {
         // Validate property types
         Object.entries(schema.properties).forEach(([propName, propSchema]: [string, any]) => {
           expect(propSchema.type).toBeDefined();
-          
+
           if (propSchema.enum) {
             expect(Array.isArray(propSchema.enum)).toBe(true);
           }
-          
+
           if (propSchema.items) {
             expect(propSchema.items.type).toBeDefined();
           }
@@ -251,12 +241,17 @@ describe('MCP Protocol Integration Tests', () => {
 
     test('should include platform parameter in multi-platform tools', async () => {
       const response = await listTools();
-      
+
       const multiPlatformTools = [
-        'pim_auth_start', 'pim_auth_callback',
-        'pim_email_search', 'pim_email_get', 'pim_email_send',
-        'pim_email_reply', 'pim_email_mark_read', 'pim_email_delete',
-        'pim_calendar_create_event'
+        'pim_auth_start',
+        'pim_auth_callback',
+        'pim_email_search',
+        'pim_email_get',
+        'pim_email_send',
+        'pim_email_reply',
+        'pim_email_mark_read',
+        'pim_email_delete',
+        'pim_calendar_create_event',
       ];
 
       multiPlatformTools.forEach(toolName => {
@@ -276,7 +271,7 @@ describe('MCP Protocol Integration Tests', () => {
       test('should start authentication with valid parameters', async () => {
         const result = await callTool('pim_auth_start', {
           platform: 'microsoft',
-          userId: 'test-user-123'
+          userId: 'test-user-123',
         });
 
         expect(result).toHaveValidMCPResponse();
@@ -287,7 +282,7 @@ describe('MCP Protocol Integration Tests', () => {
       test('should reject invalid platform', async () => {
         try {
           await callTool('pim_auth_start', {
-            platform: 'invalid-platform'
+            platform: 'invalid-platform',
           });
           expect(true).toBe(false); // Should not reach here
         } catch (error) {
@@ -306,16 +301,16 @@ describe('MCP Protocol Integration Tests', () => {
       test('should provide different auth URLs for different users', async () => {
         const result1 = await callTool('pim_auth_start', {
           platform: 'microsoft',
-          userId: 'user1'
+          userId: 'user1',
         });
 
         const result2 = await callTool('pim_auth_start', {
           platform: 'microsoft',
-          userId: 'user2'
+          userId: 'user2',
         });
 
         expect(result1.content[0].text).not.toBe(result2.content[0].text);
-        
+
         // Extract URLs and verify they're different
         const url1 = result1.content[0].text.match(/https:\/\/[^\s]+/)[0];
         const url2 = result2.content[0].text.match(/https:\/\/[^\s]+/)[0];
@@ -330,9 +325,9 @@ describe('MCP Protocol Integration Tests', () => {
         // Start authentication to get valid state
         const authResult = await callTool('pim_auth_start', {
           platform: 'microsoft',
-          userId: 'callback-test-user'
+          userId: 'callback-test-user',
         });
-        
+
         const url = authResult.content[0].text.match(/https:\/\/[^\s]+/)[0];
         authState = new URL(url).searchParams.get('state')!;
       });
@@ -345,7 +340,7 @@ describe('MCP Protocol Integration Tests', () => {
         const result = await callTool('pim_auth_callback', {
           platform: 'microsoft',
           code: 'valid-auth-code-12345',
-          state: authState
+          state: authState,
         });
 
         expect(result).toHaveValidMCPResponse();
@@ -356,7 +351,7 @@ describe('MCP Protocol Integration Tests', () => {
         const result = await callTool('pim_auth_callback', {
           platform: 'microsoft',
           code: 'valid-auth-code',
-          state: 'invalid-state-12345'
+          state: 'invalid-state-12345',
         });
 
         expect(result).toHaveValidMCPResponse();
@@ -367,7 +362,7 @@ describe('MCP Protocol Integration Tests', () => {
         const testCases = [
           { code: '', state: authState },
           { code: 'valid-code', state: '' },
-          { platform: 'microsoft' } // Missing both code and state
+          { platform: 'microsoft' }, // Missing both code and state
         ];
 
         for (const testCase of testCases) {
@@ -383,7 +378,7 @@ describe('MCP Protocol Integration Tests', () => {
         const result = await callTool('pim_auth_status', {});
 
         expect(result).toHaveValidMCPResponse();
-        
+
         const statusData = JSON.parse(result.content[0].text);
         expect(statusData.microsoft).toBeDefined();
         expect(typeof statusData.microsoft.isAuthenticated).toBe('boolean');
@@ -391,11 +386,11 @@ describe('MCP Protocol Integration Tests', () => {
 
       test('should return status for specific platform', async () => {
         const result = await callTool('pim_auth_status', {
-          platform: 'microsoft'
+          platform: 'microsoft',
         });
 
         expect(result).toHaveValidMCPResponse();
-        
+
         const statusData = JSON.parse(result.content[0].text);
         expect(statusData.platform).toBe('microsoft');
         expect(typeof statusData.isAuthenticated).toBe('boolean');
@@ -427,7 +422,7 @@ describe('MCP Protocol Integration Tests', () => {
       test('should search emails with basic query', async () => {
         const result = await callTool('pim_email_search', {
           query: 'project update',
-          platform: 'microsoft'
+          platform: 'microsoft',
         });
 
         expect(result).toHaveValidMCPResponse();
@@ -443,7 +438,7 @@ describe('MCP Protocol Integration Tests', () => {
           hasAttachments: true,
           isRead: false,
           importance: 'high',
-          limit: 20
+          limit: 20,
         });
 
         expect(result).toHaveValidMCPResponse();
@@ -455,7 +450,7 @@ describe('MCP Protocol Integration Tests', () => {
 
         const result = await callTool('pim_email_search', {
           query: 'test',
-          platform: 'microsoft'
+          platform: 'microsoft',
         });
 
         expect(result).toHaveValidMCPResponse();
@@ -465,7 +460,7 @@ describe('MCP Protocol Integration Tests', () => {
       test('should validate search parameters', async () => {
         const result = await callTool('pim_email_search', {
           platform: 'microsoft',
-          limit: -1 // Invalid limit
+          limit: -1, // Invalid limit
         });
 
         expect(result).toHaveValidMCPResponse();
@@ -477,7 +472,7 @@ describe('MCP Protocol Integration Tests', () => {
           query: 'quarterly report',
           platform: 'microsoft',
           dateFrom: '2024-01-01T00:00:00Z',
-          dateTo: '2024-03-31T23:59:59Z'
+          dateTo: '2024-03-31T23:59:59Z',
         });
 
         expect(result).toHaveValidMCPResponse();
@@ -489,7 +484,7 @@ describe('MCP Protocol Integration Tests', () => {
       test('should get email by ID', async () => {
         const result = await callTool('pim_email_get', {
           emailId: 'test-email-123',
-          platform: 'microsoft'
+          platform: 'microsoft',
         });
 
         expect(result).toHaveValidMCPResponse();
@@ -498,7 +493,7 @@ describe('MCP Protocol Integration Tests', () => {
 
       test('should require emailId parameter', async () => {
         const result = await callTool('pim_email_get', {
-          platform: 'microsoft'
+          platform: 'microsoft',
         });
 
         expect(result).toHaveValidMCPResponse();
@@ -510,7 +505,7 @@ describe('MCP Protocol Integration Tests', () => {
 
         const result = await callTool('pim_email_get', {
           emailId: 'test-email-123',
-          platform: 'microsoft'
+          platform: 'microsoft',
         });
 
         expect(result).toHaveValidMCPResponse();
@@ -524,7 +519,7 @@ describe('MCP Protocol Integration Tests', () => {
           to: ['recipient@example.com'],
           subject: 'Test Email',
           body: 'This is a test email',
-          platform: 'microsoft'
+          platform: 'microsoft',
         });
 
         expect(result).toHaveValidMCPResponse();
@@ -539,7 +534,7 @@ describe('MCP Protocol Integration Tests', () => {
           bcc: ['bcc@example.com'],
           subject: 'Multi-recipient Email',
           body: 'Email to multiple recipients',
-          platform: 'microsoft'
+          platform: 'microsoft',
         });
 
         expect(result).toHaveValidMCPResponse();
@@ -550,13 +545,13 @@ describe('MCP Protocol Integration Tests', () => {
         const testCases = [
           { subject: 'No recipients', body: 'Test' }, // Missing 'to'
           { to: ['test@example.com'], body: 'No subject' }, // Missing 'subject'
-          { to: ['test@example.com'], subject: 'No body' } // Missing 'body'
+          { to: ['test@example.com'], subject: 'No body' }, // Missing 'body'
         ];
 
         for (const testCase of testCases) {
           const result = await callTool('pim_email_send', {
             ...testCase,
-            platform: 'microsoft'
+            platform: 'microsoft',
           });
 
           expect(result).toHaveValidMCPResponse();
@@ -571,7 +566,7 @@ describe('MCP Protocol Integration Tests', () => {
           body: '<h1>HTML Content</h1><p>This is HTML email</p>',
           bodyType: 'html',
           importance: 'high',
-          platform: 'microsoft'
+          platform: 'microsoft',
         });
 
         expect(result).toHaveValidMCPResponse();
@@ -584,7 +579,7 @@ describe('MCP Protocol Integration Tests', () => {
         const result = await callTool('pim_email_reply', {
           emailId: 'original-email-123',
           body: 'This is my reply',
-          platform: 'microsoft'
+          platform: 'microsoft',
         });
 
         expect(result).toHaveValidMCPResponse();
@@ -596,7 +591,7 @@ describe('MCP Protocol Integration Tests', () => {
           emailId: 'original-email-123',
           body: 'Reply to all participants',
           replyAll: true,
-          platform: 'microsoft'
+          platform: 'microsoft',
         });
 
         expect(result).toHaveValidMCPResponse();
@@ -606,13 +601,13 @@ describe('MCP Protocol Integration Tests', () => {
       test('should require emailId and body', async () => {
         const testCases = [
           { body: 'Reply without email ID' }, // Missing emailId
-          { emailId: 'test-123' } // Missing body
+          { emailId: 'test-123' }, // Missing body
         ];
 
         for (const testCase of testCases) {
           const result = await callTool('pim_email_reply', {
             ...testCase,
-            platform: 'microsoft'
+            platform: 'microsoft',
           });
 
           expect(result).toHaveValidMCPResponse();
@@ -626,7 +621,7 @@ describe('MCP Protocol Integration Tests', () => {
         const result = await callTool('pim_email_mark_read', {
           emailId: 'email-to-mark-read',
           isRead: true,
-          platform: 'microsoft'
+          platform: 'microsoft',
         });
 
         expect(result).toHaveValidMCPResponse();
@@ -637,7 +632,7 @@ describe('MCP Protocol Integration Tests', () => {
         const result = await callTool('pim_email_mark_read', {
           emailId: 'email-to-mark-unread',
           isRead: false,
-          platform: 'microsoft'
+          platform: 'microsoft',
         });
 
         expect(result).toHaveValidMCPResponse();
@@ -647,7 +642,7 @@ describe('MCP Protocol Integration Tests', () => {
       test('should default to marking as read', async () => {
         const result = await callTool('pim_email_mark_read', {
           emailId: 'email-default-read',
-          platform: 'microsoft'
+          platform: 'microsoft',
         });
 
         expect(result).toHaveValidMCPResponse();
@@ -659,7 +654,7 @@ describe('MCP Protocol Integration Tests', () => {
       test('should delete email by ID', async () => {
         const result = await callTool('pim_email_delete', {
           emailId: 'email-to-delete',
-          platform: 'microsoft'
+          platform: 'microsoft',
         });
 
         expect(result).toHaveValidMCPResponse();
@@ -668,7 +663,7 @@ describe('MCP Protocol Integration Tests', () => {
 
       test('should require emailId parameter', async () => {
         const result = await callTool('pim_email_delete', {
-          platform: 'microsoft'
+          platform: 'microsoft',
         });
 
         expect(result).toHaveValidMCPResponse();
@@ -688,7 +683,7 @@ describe('MCP Protocol Integration Tests', () => {
           title: 'Team Meeting',
           start: '2024-12-01T10:00:00Z',
           end: '2024-12-01T11:00:00Z',
-          platform: 'microsoft'
+          platform: 'microsoft',
         });
 
         expect(result).toHaveValidMCPResponse();
@@ -704,7 +699,7 @@ describe('MCP Protocol Integration Tests', () => {
           location: 'Conference Room A',
           description: 'Quarterly project review meeting',
           attendees: ['attendee1@company.com', 'attendee2@company.com'],
-          platform: 'microsoft'
+          platform: 'microsoft',
         });
 
         expect(result).toHaveValidMCPResponse();
@@ -715,13 +710,13 @@ describe('MCP Protocol Integration Tests', () => {
         const testCases = [
           { start: '2024-12-01T10:00:00Z', end: '2024-12-01T11:00:00Z' }, // Missing title
           { title: 'Meeting', end: '2024-12-01T11:00:00Z' }, // Missing start
-          { title: 'Meeting', start: '2024-12-01T10:00:00Z' } // Missing end
+          { title: 'Meeting', start: '2024-12-01T10:00:00Z' }, // Missing end
         ];
 
         for (const testCase of testCases) {
           const result = await callTool('pim_calendar_create_event', {
             ...testCase,
-            platform: 'microsoft'
+            platform: 'microsoft',
           });
 
           expect(result).toHaveValidMCPResponse();
@@ -734,7 +729,7 @@ describe('MCP Protocol Integration Tests', () => {
           title: 'Invalid Date Meeting',
           start: 'invalid-date-format',
           end: 'also-invalid',
-          platform: 'microsoft'
+          platform: 'microsoft',
         });
 
         expect(result).toHaveValidMCPResponse();
@@ -783,9 +778,7 @@ describe('MCP Protocol Integration Tests', () => {
 
     test('should handle invalid resource URI', async () => {
       try {
-        const request = { method: 'resources/read', params: { uri: 'pim://invalid' } };
-        const handler = mcpServer.getRequestHandler(ReadResourceRequestSchema);
-        await handler(request as any);
+        await pimServer.readResource('pim://invalid');
         expect(true).toBe(false); // Should not reach here
       } catch (error) {
         expect(error).toBeInstanceOf(McpError);
@@ -809,7 +802,7 @@ describe('MCP Protocol Integration Tests', () => {
       try {
         await callTool('pim_email_get', {
           // Missing required emailId parameter
-          platform: 'microsoft'
+          platform: 'microsoft',
         });
       } catch (error) {
         if (error instanceof McpError) {
@@ -840,7 +833,7 @@ describe('MCP Protocol Integration Tests', () => {
 
     test('should provide helpful error messages', async () => {
       const result = await callTool('pim_email_send', {
-        platform: 'microsoft'
+        platform: 'microsoft',
         // Missing all required fields
       });
 
@@ -855,7 +848,7 @@ describe('MCP Protocol Integration Tests', () => {
       const concurrentCalls = Array.from({ length: 10 }, (_, i) =>
         callTool('pim_email_search', {
           query: `concurrent search ${i}`,
-          platform: 'microsoft'
+          platform: 'microsoft',
         })
       );
 
@@ -871,13 +864,13 @@ describe('MCP Protocol Integration Tests', () => {
       // Start authentication for user 1
       const auth1 = await callTool('pim_auth_start', {
         platform: 'microsoft',
-        userId: 'user1'
+        userId: 'user1',
       });
 
-      // Start authentication for user 2  
+      // Start authentication for user 2
       const auth2 = await callTool('pim_auth_start', {
         platform: 'microsoft',
-        userId: 'user2'
+        userId: 'user2',
       });
 
       // Both should succeed with different auth URLs
@@ -890,7 +883,7 @@ describe('MCP Protocol Integration Tests', () => {
   describe('Performance and Load Testing', () => {
     test('should handle rapid tool calls without degradation', async () => {
       const startTime = Date.now();
-      
+
       const rapidCalls = Array.from({ length: 50 }, () =>
         callTool('pim_auth_status', { platform: 'microsoft' })
       );
@@ -914,11 +907,13 @@ describe('MCP Protocol Integration Tests', () => {
         ...Array.from({ length: 10 }, () => callTool('pim_auth_status', {})),
         ...Array.from({ length: 10 }, () => callTool('pim_email_search', { query: 'test' })),
         ...Array.from({ length: 5 }, () => callTool('pim_email_get', { emailId: 'test-123' })),
-        ...Array.from({ length: 5 }, () => callTool('pim_calendar_create_event', {
-          title: 'Load Test Event',
-          start: '2024-12-01T10:00:00Z',
-          end: '2024-12-01T11:00:00Z'
-        }))
+        ...Array.from({ length: 5 }, () =>
+          callTool('pim_calendar_create_event', {
+            title: 'Load Test Event',
+            start: '2024-12-01T10:00:00Z',
+            end: '2024-12-01T11:00:00Z',
+          })
+        ),
       ];
 
       const startTime = Date.now();
@@ -940,7 +935,7 @@ describe('MCP Protocol Integration Tests', () => {
     await securityManager.storeTokens('microsoft', {
       accessToken: mockTokenResponse.accessToken,
       refreshToken: mockTokenResponse.account?.homeAccountId || 'refresh-token',
-      expiresAt: new Date(Date.now() + 3600000) // 1 hour from now
+      expiresAt: new Date(Date.now() + 3600000), // 1 hour from now
     });
   }
 });

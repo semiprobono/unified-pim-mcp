@@ -12,18 +12,18 @@ const execAsync = promisify(exec);
  */
 export default async function globalSetup(): Promise<void> {
   console.log('🔧 Setting up integration test environment...');
-  
+
   const isRealIntegration = process.env.REAL_INTEGRATION === 'true';
-  
+
   if (isRealIntegration) {
     await setupRealServices();
   } else {
     await setupMockServices();
   }
-  
+
   // Create test environment file
   await createTestEnvFile();
-  
+
   console.log('✅ Integration test environment ready');
 }
 
@@ -32,24 +32,24 @@ export default async function globalSetup(): Promise<void> {
  */
 async function setupRealServices(): Promise<void> {
   console.log('🌐 Setting up real external services...');
-  
+
   // Start ChromaDB container
   try {
     await execAsync('docker-compose -f docker-compose.dev.yml up -d chromadb');
     console.log('📊 ChromaDB container started');
-    
+
     // Wait for ChromaDB to be ready
     await waitForService('http://localhost:8000/api/v1/heartbeat', 30000);
     console.log('✅ ChromaDB is ready');
   } catch (error) {
     console.warn('⚠️ Failed to start ChromaDB container:', error);
   }
-  
+
   // Start Redis if needed
   try {
     await execAsync('docker-compose -f docker-compose.dev.yml up -d redis');
     console.log('🔴 Redis container started');
-    
+
     // Wait for Redis to be ready
     await waitForService('redis://localhost:6379', 15000, 'redis');
     console.log('✅ Redis is ready');
@@ -63,10 +63,10 @@ async function setupRealServices(): Promise<void> {
  */
 async function setupMockServices(): Promise<void> {
   console.log('🎭 Setting up mock services...');
-  
+
   // Start mock OAuth server if needed
   const mockOAuthPort = process.env.MOCK_OAUTH_PORT || '3001';
-  
+
   try {
     // Check if mock OAuth server is already running
     await fetch(`http://localhost:${mockOAuthPort}/health`);
@@ -75,11 +75,11 @@ async function setupMockServices(): Promise<void> {
     console.log('🔐 Starting mock OAuth server...');
     // Mock OAuth server would be started here in a real scenario
   }
-  
+
   // Setup in-memory mock ChromaDB
   console.log('📊 Setting up in-memory ChromaDB mock');
   process.env.CHROMADB_HOST = 'mock';
-  
+
   // Setup mock Graph API responses
   console.log('📮 Setting up mock Microsoft Graph API');
   process.env.MICROSOFT_GRAPH_BASE_URL = 'http://localhost:3002/mock';
@@ -89,12 +89,12 @@ async function setupMockServices(): Promise<void> {
  * Wait for a service to become available
  */
 async function waitForService(
-  url: string, 
-  timeout: number = 30000, 
+  url: string,
+  timeout: number = 30000,
   type: 'http' | 'redis' = 'http'
 ): Promise<void> {
   const startTime = Date.now();
-  
+
   while (Date.now() - startTime < timeout) {
     try {
       if (type === 'http') {
@@ -109,10 +109,10 @@ async function waitForService(
     } catch (error) {
       // Service not ready yet
     }
-    
+
     await new Promise(resolve => setTimeout(resolve, 1000));
   }
-  
+
   throw new Error(`Service at ${url} did not become available within ${timeout}ms`);
 }
 
@@ -121,7 +121,7 @@ async function waitForService(
  */
 async function createTestEnvFile(): Promise<void> {
   const testEnvPath = path.join(process.cwd(), '.env.test');
-  
+
   const testEnvContent = `
 # Integration Test Environment
 NODE_ENV=test

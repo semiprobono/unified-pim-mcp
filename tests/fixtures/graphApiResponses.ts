@@ -24,7 +24,8 @@ export const mockUserProfile = {
  * Email/Messages responses
  */
 export const mockMessage = {
-  '@odata.context': 'https://graph.microsoft.com/v1.0/$metadata#users(\'test-user-id\')/messages/$entity',
+  '@odata.context':
+    "https://graph.microsoft.com/v1.0/$metadata#users('test-user-id')/messages/$entity",
   id: 'test-message-id',
   createdDateTime: '2024-01-15T10:30:00Z',
   lastModifiedDateTime: '2024-01-15T10:30:00Z',
@@ -54,12 +55,14 @@ export const mockMessage = {
       address: 'sender@example.com',
     },
   },
-  toRecipients: [{
-    emailAddress: {
-      name: 'Test User',
-      address: 'test@example.com',
+  toRecipients: [
+    {
+      emailAddress: {
+        name: 'Test User',
+        address: 'test@example.com',
+      },
     },
-  }],
+  ],
   ccRecipients: [],
   bccRecipients: [],
   replyTo: [],
@@ -69,7 +72,7 @@ export const mockMessage = {
 };
 
 export const mockMessagesResponse = {
-  '@odata.context': 'https://graph.microsoft.com/v1.0/$metadata#users(\'test-user-id\')/messages',
+  '@odata.context': "https://graph.microsoft.com/v1.0/$metadata#users('test-user-id')/messages",
   '@odata.nextLink': 'https://graph.microsoft.com/v1.0/users/test-user-id/messages?$skip=10',
   value: [
     mockMessage,
@@ -86,7 +89,8 @@ export const mockMessagesResponse = {
  * Calendar/Events responses
  */
 export const mockCalendarEvent = {
-  '@odata.context': 'https://graph.microsoft.com/v1.0/$metadata#users(\'test-user-id\')/events/$entity',
+  '@odata.context':
+    "https://graph.microsoft.com/v1.0/$metadata#users('test-user-id')/events/$entity",
   id: 'test-event-id',
   createdDateTime: '2024-01-15T09:00:00Z',
   lastModifiedDateTime: '2024-01-15T09:00:00Z',
@@ -127,21 +131,25 @@ export const mockCalendarEvent = {
     displayName: 'Conference Room A',
     locationType: 'default',
   },
-  locations: [{
-    displayName: 'Conference Room A',
-    locationType: 'default',
-  }],
-  attendees: [{
-    type: 'required',
-    status: {
-      response: 'none',
-      time: '0001-01-01T00:00:00Z',
+  locations: [
+    {
+      displayName: 'Conference Room A',
+      locationType: 'default',
     },
-    emailAddress: {
-      name: 'Attendee Name',
-      address: 'attendee@example.com',
+  ],
+  attendees: [
+    {
+      type: 'required',
+      status: {
+        response: 'none',
+        time: '0001-01-01T00:00:00Z',
+      },
+      emailAddress: {
+        name: 'Attendee Name',
+        address: 'attendee@example.com',
+      },
     },
-  }],
+  ],
   organizer: {
     emailAddress: {
       name: 'Test User',
@@ -152,7 +160,7 @@ export const mockCalendarEvent = {
 };
 
 export const mockEventsResponse = {
-  '@odata.context': 'https://graph.microsoft.com/v1.0/$metadata#users(\'test-user-id\')/events',
+  '@odata.context': "https://graph.microsoft.com/v1.0/$metadata#users('test-user-id')/events",
   value: [mockCalendarEvent],
 };
 
@@ -160,7 +168,8 @@ export const mockEventsResponse = {
  * Contacts responses
  */
 export const mockContact = {
-  '@odata.context': 'https://graph.microsoft.com/v1.0/$metadata#users(\'test-user-id\')/contacts/$entity',
+  '@odata.context':
+    "https://graph.microsoft.com/v1.0/$metadata#users('test-user-id')/contacts/$entity",
   id: 'test-contact-id',
   createdDateTime: '2024-01-15T08:00:00Z',
   lastModifiedDateTime: '2024-01-15T08:00:00Z',
@@ -174,22 +183,28 @@ export const mockContact = {
   nickName: null,
   title: 'Mr.',
   generation: null,
-  emailAddresses: [{
-    name: 'Contact Name',
-    address: 'contact@example.com',
-  }],
-  phones: [{
-    type: 'business',
-    number: '+1 555-0125',
-  }],
-  postalAddresses: [{
-    type: 'business',
-    street: '123 Business St',
-    city: 'Business City',
-    state: 'BC',
-    postalCode: '12345',
-    countryOrRegion: 'USA',
-  }],
+  emailAddresses: [
+    {
+      name: 'Contact Name',
+      address: 'contact@example.com',
+    },
+  ],
+  phones: [
+    {
+      type: 'business',
+      number: '+1 555-0125',
+    },
+  ],
+  postalAddresses: [
+    {
+      type: 'business',
+      street: '123 Business St',
+      city: 'Business City',
+      state: 'BC',
+      postalCode: '12345',
+      countryOrRegion: 'USA',
+    },
+  ],
   birthday: null,
   personalNotes: 'Test contact notes',
   profession: 'Engineer',
@@ -215,7 +230,7 @@ export const mockContact = {
 };
 
 export const mockContactsResponse = {
-  '@odata.context': 'https://graph.microsoft.com/v1.0/$metadata#users(\'test-user-id\')/contacts',
+  '@odata.context': "https://graph.microsoft.com/v1.0/$metadata#users('test-user-id')/contacts",
   value: [mockContact],
 };
 
@@ -223,7 +238,8 @@ export const mockContactsResponse = {
  * Files/Drive responses
  */
 export const mockDriveItem = {
-  '@odata.context': 'https://graph.microsoft.com/v1.0/$metadata#users(\'test-user-id\')/drive/items/$entity',
+  '@odata.context':
+    "https://graph.microsoft.com/v1.0/$metadata#users('test-user-id')/drive/items/$entity",
   id: 'test-file-id',
   name: 'test-document.docx',
   createdDateTime: '2024-01-15T12:00:00Z',
@@ -258,7 +274,7 @@ export const mockDriveItem = {
 };
 
 export const mockDriveItemsResponse = {
-  '@odata.context': 'https://graph.microsoft.com/v1.0/$metadata#users(\'test-user-id\')/drive/items',
+  '@odata.context': "https://graph.microsoft.com/v1.0/$metadata#users('test-user-id')/drive/items",
   value: [mockDriveItem],
 };
 
@@ -266,7 +282,8 @@ export const mockDriveItemsResponse = {
  * Tasks/To-Do responses
  */
 export const mockTodoTask = {
-  '@odata.context': 'https://graph.microsoft.com/v1.0/$metadata#users(\'test-user-id\')/todo/lists(\'test-list-id\')/tasks/$entity',
+  '@odata.context':
+    "https://graph.microsoft.com/v1.0/$metadata#users('test-user-id')/todo/lists('test-list-id')/tasks/$entity",
   id: 'test-task-id',
   importance: 'normal',
   isReminderOn: false,
@@ -290,7 +307,8 @@ export const mockTodoTask = {
 };
 
 export const mockTodoTasksResponse = {
-  '@odata.context': 'https://graph.microsoft.com/v1.0/$metadata#users(\'test-user-id\')/todo/lists(\'test-list-id\')/tasks',
+  '@odata.context':
+    "https://graph.microsoft.com/v1.0/$metadata#users('test-user-id')/todo/lists('test-list-id')/tasks",
   value: [mockTodoTask],
 };
 
@@ -329,7 +347,8 @@ export const mockBatchResponse = {
         'Content-Type': 'application/json',
       },
       body: {
-        '@odata.context': 'https://graph.microsoft.com/v1.0/$metadata#users(\'test-user-id\')/messages',
+        '@odata.context':
+          "https://graph.microsoft.com/v1.0/$metadata#users('test-user-id')/messages",
         value: [mockMessage],
       },
     },
@@ -436,14 +455,18 @@ export const mockRateLimitExceededHeaders = {
  * Delta query responses
  */
 export const mockDeltaResponse = {
-  '@odata.context': 'https://graph.microsoft.com/v1.0/$metadata#users(\'test-user-id\')/messages/delta',
-  '@odata.deltaLink': 'https://graph.microsoft.com/v1.0/users/test-user-id/messages/delta?$deltatoken=test-delta-token',
+  '@odata.context':
+    "https://graph.microsoft.com/v1.0/$metadata#users('test-user-id')/messages/delta",
+  '@odata.deltaLink':
+    'https://graph.microsoft.com/v1.0/users/test-user-id/messages/delta?$deltatoken=test-delta-token',
   value: [mockMessage],
 };
 
 export const mockDeltaResponseWithNextLink = {
-  '@odata.context': 'https://graph.microsoft.com/v1.0/$metadata#users(\'test-user-id\')/messages/delta',
-  '@odata.nextLink': 'https://graph.microsoft.com/v1.0/users/test-user-id/messages/delta?$skiptoken=test-skip-token',
+  '@odata.context':
+    "https://graph.microsoft.com/v1.0/$metadata#users('test-user-id')/messages/delta",
+  '@odata.nextLink':
+    'https://graph.microsoft.com/v1.0/users/test-user-id/messages/delta?$skiptoken=test-skip-token',
   value: [mockMessage],
 };
 
@@ -457,7 +480,9 @@ export function createMockMessage(overrides: Partial<typeof mockMessage>): typeo
   };
 }
 
-export function createMockEvent(overrides: Partial<typeof mockCalendarEvent>): typeof mockCalendarEvent {
+export function createMockEvent(
+  overrides: Partial<typeof mockCalendarEvent>
+): typeof mockCalendarEvent {
   return {
     ...mockCalendarEvent,
     ...overrides,
@@ -471,7 +496,9 @@ export function createMockContact(overrides: Partial<typeof mockContact>): typeo
   };
 }
 
-export function createMockDriveItem(overrides: Partial<typeof mockDriveItem>): typeof mockDriveItem {
+export function createMockDriveItem(
+  overrides: Partial<typeof mockDriveItem>
+): typeof mockDriveItem {
   return {
     ...mockDriveItem,
     ...overrides,

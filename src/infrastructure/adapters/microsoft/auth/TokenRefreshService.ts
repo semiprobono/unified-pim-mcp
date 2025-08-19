@@ -30,16 +30,16 @@ export class TokenRefreshService {
         userId,
         storedAt: new Date().toISOString(),
         platform: 'microsoft',
-        expiresOn: tokens.expiresOn.toISOString() // Convert Date to string for storage
+        expiresOn: tokens.expiresOn.toISOString(), // Convert Date to string for storage
       };
-      
+
       // Store using the security manager
       const storageKey = this.getStorageKey(userId);
       await this.securityManager.storeSecureData(storageKey, tokenData);
-      
+
       // Schedule automatic refresh
       this.scheduleTokenRefresh(tokens, userId);
-      
+
       this.logger.info(`Tokens stored securely for user: ${userId}`);
     } catch (error) {
       this.logger.error('Failed to store tokens', error);
@@ -54,7 +54,7 @@ export class TokenRefreshService {
     try {
       const storageKey = this.getStorageKey(userId);
       const tokenData = await this.securityManager.getSecureData(storageKey);
-      
+
       if (!tokenData) {
         return null;
       }
@@ -65,23 +65,23 @@ export class TokenRefreshService {
         refreshToken: tokenData.refreshToken,
         expiresOn: new Date(tokenData.expiresOn),
         scopes: tokenData.scopes,
-        account: tokenData.account
+        account: tokenData.account,
       };
-      
+
       // Check if token needs refresh
       if (this.authProvider.isTokenExpired(tokens.expiresOn, this.TOKEN_REFRESH_BUFFER_MINUTES)) {
         this.logger.info('Token expired or expiring soon, refreshing...');
-        
+
         if (tokens.refreshToken) {
           const refreshedTokens = await this.refreshTokens(tokens.refreshToken, tokens.scopes);
           await this.storeTokens(refreshedTokens, userId);
           return refreshedTokens;
         }
       }
-      
+
       // Reschedule refresh for existing tokens
       this.scheduleTokenRefresh(tokens, userId);
-      
+
       return tokens;
     } catch (error) {
       this.logger.error('Failed to retrieve tokens', error);
@@ -120,7 +120,7 @@ export class TokenRefreshService {
     // Calculate time until refresh (5 minutes before expiration)
     const now = Date.now();
     const expiresAt = tokens.expiresOn.getTime();
-    const refreshAt = expiresAt - (this.TOKEN_REFRESH_BUFFER_MINUTES * 60 * 1000);
+    const refreshAt = expiresAt - this.TOKEN_REFRESH_BUFFER_MINUTES * 60 * 1000;
     const timeUntilRefresh = refreshAt - now;
 
     if (timeUntilRefresh <= 0) {
@@ -140,7 +140,11 @@ export class TokenRefreshService {
   /**
    * Perform token refresh
    */
-  private async performTokenRefresh(userId: string, refreshToken: string, scopes: string[]): Promise<void> {
+  private async performTokenRefresh(
+    userId: string,
+    refreshToken: string,
+    scopes: string[]
+  ): Promise<void> {
     try {
       this.logger.info('Performing scheduled token refresh');
       const refreshedTokens = await this.refreshTokens(refreshToken, scopes);
@@ -158,10 +162,10 @@ export class TokenRefreshService {
   private handleTokenRefreshFailure(userId: string, error: any): void {
     // Clear stored tokens as they're no longer valid
     this.clearTokens(userId);
-    
+
     // Log the failure
     this.logger.error(`Token refresh failed for user ${userId}. User must re-authenticate.`, error);
-    
+
     // Could emit an event here for the application to handle
     // For example: this.eventEmitter.emit('token-refresh-failed', { userId, error });
   }
@@ -173,13 +177,13 @@ export class TokenRefreshService {
     try {
       const storageKey = this.getStorageKey(userId);
       await this.securityManager.deleteSecureData(storageKey);
-      
+
       // Clear refresh timer
       if (this.refreshTimer) {
         clearTimeout(this.refreshTimer);
         this.refreshTimer = null;
       }
-      
+
       this.logger.info(`Tokens cleared for user: ${userId}`);
     } catch (error) {
       this.logger.error('Failed to clear tokens', error);
@@ -193,10 +197,10 @@ export class TokenRefreshService {
     try {
       // First clear local tokens
       await this.clearTokens(userId);
-      
+
       // Sign out from MSAL
       await this.authProvider.signOut();
-      
+
       this.logger.info(`Tokens revoked for user: ${userId}`);
     } catch (error) {
       this.logger.error('Failed to revoke tokens', error);
@@ -210,7 +214,7 @@ export class TokenRefreshService {
   async rotateTokens(userId: string): Promise<TokenCacheEntry | null> {
     try {
       const currentTokens = await this.retrieveTokens(userId);
-      
+
       if (!currentTokens || !currentTokens.refreshToken) {
         this.logger.warn('Cannot rotate tokens: no refresh token available');
         return null;
@@ -218,10 +222,10 @@ export class TokenRefreshService {
 
       // Use refresh token to get new tokens
       const newTokens = await this.refreshTokens(currentTokens.refreshToken, currentTokens.scopes);
-      
+
       // Store new tokens
       await this.storeTokens(newTokens, userId);
-      
+
       this.logger.info(`Tokens rotated successfully for user: ${userId}`);
       return newTokens;
     } catch (error) {
@@ -236,7 +240,6 @@ export class TokenRefreshService {
   private getStorageKey(userId: string): string {
     return `microsoft_tokens_${userId}`;
   }
-
 
   /**
    * Cleanup service

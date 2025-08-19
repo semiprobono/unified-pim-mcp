@@ -24,14 +24,16 @@ export class MsalConfig {
    * Creates MSAL configuration with PKCE support
    */
   private createConfiguration(): Configuration {
-    const auth = this.clientSecret ? {
-      clientId: this.clientId,
-      authority: `https://login.microsoftonline.com/${this.tenantId}`,
-      clientSecret: this.clientSecret,
-    } : {
-      clientId: this.clientId,
-      authority: `https://login.microsoftonline.com/${this.tenantId}`,
-    };
+    const auth = this.clientSecret
+      ? {
+          clientId: this.clientId,
+          authority: `https://login.microsoftonline.com/${this.tenantId}`,
+          clientSecret: this.clientSecret,
+        }
+      : {
+          clientId: this.clientId,
+          authority: `https://login.microsoftonline.com/${this.tenantId}`,
+        };
 
     return {
       auth,

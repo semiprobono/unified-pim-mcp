@@ -52,7 +52,7 @@ export class HealthMonitor extends EventEmitter {
       const status = {
         timestamp: new Date(),
         isHealthy: true,
-        services: {} as Record<string, any>
+        services: {} as Record<string, any>,
       };
 
       // Check each service
@@ -60,14 +60,14 @@ export class HealthMonitor extends EventEmitter {
         try {
           const serviceStatus = await this.checkService(service);
           status.services[name] = serviceStatus;
-          
+
           if (!serviceStatus.isHealthy) {
             status.isHealthy = false;
           }
         } catch (error) {
           status.services[name] = {
             isHealthy: false,
-            error: error instanceof Error ? error.message : 'Unknown error'
+            error: error instanceof Error ? error.message : 'Unknown error',
           };
           status.isHealthy = false;
         }
@@ -87,7 +87,7 @@ export class HealthMonitor extends EventEmitter {
       const status = await service.getStatus();
       return {
         isHealthy: true,
-        ...status
+        ...status,
       };
     }
 

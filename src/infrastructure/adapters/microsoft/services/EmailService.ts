@@ -1,9 +1,9 @@
 import { Logger } from '../../../../shared/logging/Logger.js';
 import { Email, EmailEntity } from '../../../../domain/entities/Email.js';
-import { 
-  PlatformResult, 
-  SearchCriteria, 
-  PaginationInfo 
+import {
+  PaginationInfo,
+  PlatformResult,
+  SearchCriteria,
 } from '../../../../domain/interfaces/PlatformPort.js';
 import { GraphClient } from '../clients/GraphClient.js';
 import { CacheManager } from '../cache/CacheManager.js';
@@ -68,43 +68,41 @@ export class EmailService {
     try {
       // Check cache first
       const cacheKey = `${this.cacheKeyPrefix}${id}`;
-      const cached = await this.cacheManager.get<Email>(cacheKey);
-      
+      const cached = await this.cacheManager.get(cacheKey);
+
       if (cached) {
         this.logger.debug(`Email ${id} retrieved from cache`);
         return {
           success: true,
-          data: cached
+          data: cached,
         };
       }
 
       // Fetch from Graph API
-      const response = await this.graphClient.get<any>(
-        `/me/messages/${id}`,
-        {
-          params: {
-            '$expand': 'attachments',
-            '$select': 'id,subject,body,bodyPreview,from,toRecipients,ccRecipients,bccRecipients,replyTo,receivedDateTime,sentDateTime,isRead,isDraft,importance,hasAttachments,conversationId,internetMessageId,categories,attachments'
-          }
-        }
-      );
+      const response = await this.graphClient.get<any>(`/me/messages/${id}`, {
+        params: {
+          $expand: 'attachments',
+          $select:
+            'id,subject,body,bodyPreview,from,toRecipients,ccRecipients,bccRecipients,replyTo,receivedDateTime,sentDateTime,isRead,isDraft,importance,hasAttachments,conversationId,internetMessageId,categories,attachments',
+        },
+      });
 
       // Map to domain entity
       const email = EmailMapper.toDomainEmail(response);
 
       // Cache the result
-      await this.cacheManager.set(cacheKey, email, 3600); // Cache for 1 hour
+      await (this.cacheManager as any).set(cacheKey, email, 3600); // Cache for 1 hour
 
       // Index in ChromaDB for search
       await this.indexEmail(email);
 
       return {
         success: true,
-        data: email
+        data: email,
       };
     } catch (error) {
       this.logger.error(`Failed to get email ${id}`, error);
-      return this.errorHandler.handleError(error);
+      throw error;
     }
   }
 
@@ -115,13 +113,14 @@ export class EmailService {
     try {
       // Build filter query
       const filter = this.buildFilterQuery(options);
-      
+
       // Build request parameters
       const params: any = {
-        '$top': options.limit || 25,
-        '$skip': options.skip || 0,
-        '$count': true,
-        '$select': 'id,subject,body,bodyPreview,from,toRecipients,ccRecipients,bccRecipients,receivedDateTime,sentDateTime,isRead,isDraft,importance,hasAttachments,conversationId,categories'
+        $top: options.limit || 25,
+        $skip: options.skip || 0,
+        $count: true,
+        $select:
+          'id,subject,body,bodyPreview,from,toRecipients,ccRecipients,bccRecipients,receivedDateTime,sentDateTime,isRead,isDraft,importance,hasAttachments,conversationId,categories',
       };
 
       if (filter) {
@@ -167,19 +166,23 @@ export class EmailService {
           pageSize,
           hasNextPage,
           hasPreviousPage,
-          nextCursor: response['@odata.nextLink'] ? this.extractNextPageToken(response['@odata.nextLink']) : undefined
+          nextCursor: response['@odata.nextLink']
+            ? this.extractNextPageToken(response['@odata.nextLink'])
+            : undefined,
         },
-        nextPageToken: response['@odata.nextLink'] ? this.extractNextPageToken(response['@odata.nextLink']) : undefined
+        nextPageToken: response['@odata.nextLink']
+          ? this.extractNextPageToken(response['@odata.nextLink'])
+          : undefined,
       };
 
       return {
         success: true,
         data: result,
-        pagination: result.pagination
+        pagination: result.pagination,
       };
     } catch (error) {
       this.logger.error('Failed to search emails', error);
-      return this.errorHandler.handleError(error);
+      throw error;
     }
   }
 
@@ -192,10 +195,7 @@ export class EmailService {
       const graphEmail = EmailMapper.toGraphEmail(email);
 
       // Send via Graph API
-      const response = await this.graphClient.post<any>(
-        '/me/sendMail',
-        graphEmail
-      );
+      const response = await this.graphClient.post<any>('/me/sendMail', graphEmail);
 
       // Get the sent message ID from the response headers or body
       const messageId = response?.id || 'sent';
@@ -204,11 +204,11 @@ export class EmailService {
 
       return {
         success: true,
-        data: messageId
+        data: messageId,
       };
     } catch (error) {
       this.logger.error('Failed to send email', error);
-      return this.errorHandler.handleError(error);
+      throw error;
     }
   }
 
@@ -217,10 +217,7 @@ export class EmailService {
    */
   async markAsRead(emailId: string, isRead: boolean = true): Promise<PlatformResult<boolean>> {
     try {
-      await this.graphClient.patch(
-        `/me/messages/${emailId}`,
-        { isRead }
-      );
+      await this.graphClient.patch(`/me/messages/${emailId}`, { isRead });
 
       // Invalidate cache
       await this.cacheManager.delete(`${this.cacheKeyPrefix}${emailId}`);
@@ -229,11 +226,11 @@ export class EmailService {
 
       return {
         success: true,
-        data: true
+        data: true,
       };
     } catch (error) {
       this.logger.error(`Failed to mark email ${emailId} as read`, error);
-      return this.errorHandler.handleError(error);
+      throw error;
     }
   }
 
@@ -248,20 +245,21 @@ export class EmailService {
       await this.cacheManager.delete(`${this.cacheKeyPrefix}${emailId}`);
 
       // Remove from ChromaDB index
-      await this.chromaDb.deleteDocuments({
-        collection: 'graph-search-index',
-        ids: [`email_${emailId}`]
-      });
+      // TODO: Implement email deletion from vector store
+      // await this.chromaDb.deleteDocuments({
+      //   collection: 'graph-search-index',
+      //   ids: [`email_${emailId}`]
+      // });
 
       this.logger.info(`Email ${emailId} deleted successfully`);
 
       return {
         success: true,
-        data: true
+        data: true,
       };
     } catch (error) {
       this.logger.error(`Failed to delete email ${emailId}`, error);
-      return this.errorHandler.handleError(error);
+      throw error;
     }
   }
 
@@ -270,10 +268,7 @@ export class EmailService {
    */
   async moveToFolder(emailId: string, folderId: string): Promise<PlatformResult<boolean>> {
     try {
-      await this.graphClient.post(
-        `/me/messages/${emailId}/move`,
-        { destinationId: folderId }
-      );
+      await this.graphClient.post(`/me/messages/${emailId}/move`, { destinationId: folderId });
 
       // Invalidate cache
       await this.cacheManager.delete(`${this.cacheKeyPrefix}${emailId}`);
@@ -282,11 +277,11 @@ export class EmailService {
 
       return {
         success: true,
-        data: true
+        data: true,
       };
     } catch (error) {
       this.logger.error(`Failed to move email ${emailId} to folder ${folderId}`, error);
-      return this.errorHandler.handleError(error);
+      throw error;
     }
   }
 
@@ -295,21 +290,20 @@ export class EmailService {
    */
   async copyToFolder(emailId: string, folderId: string): Promise<PlatformResult<string>> {
     try {
-      const response = await this.graphClient.post<any>(
-        `/me/messages/${emailId}/copy`,
-        { destinationId: folderId }
-      );
+      const response = await this.graphClient.post<any>(`/me/messages/${emailId}/copy`, {
+        destinationId: folderId,
+      });
 
       const newEmailId = response.id;
       this.logger.debug(`Email ${emailId} copied to folder ${folderId}, new ID: ${newEmailId}`);
 
       return {
         success: true,
-        data: newEmailId
+        data: newEmailId,
       };
     } catch (error) {
       this.logger.error(`Failed to copy email ${emailId} to folder ${folderId}`, error);
-      return this.errorHandler.handleError(error);
+      throw error;
     }
   }
 
@@ -319,27 +313,24 @@ export class EmailService {
   async updateEmail(emailId: string, updates: Partial<Email>): Promise<PlatformResult<Email>> {
     try {
       const graphUpdate = EmailMapper.toGraphUpdate(updates);
-      
-      const response = await this.graphClient.patch<any>(
-        `/me/messages/${emailId}`,
-        graphUpdate
-      );
+
+      const response = await this.graphClient.patch<any>(`/me/messages/${emailId}`, graphUpdate);
 
       const updatedEmail = EmailMapper.toDomainEmail(response);
 
       // Update cache
-      await this.cacheManager.set(`${this.cacheKeyPrefix}${emailId}`, updatedEmail, 3600);
+      await (this.cacheManager as any).set(`${this.cacheKeyPrefix}${emailId}`, updatedEmail, 3600);
 
       // Update ChromaDB index
       await this.indexEmail(updatedEmail);
 
       return {
         success: true,
-        data: updatedEmail
+        data: updatedEmail,
       };
     } catch (error) {
       this.logger.error(`Failed to update email ${emailId}`, error);
-      return this.errorHandler.handleError(error);
+      throw error;
     }
   }
 
@@ -349,50 +340,55 @@ export class EmailService {
   async createDraft(email: Partial<Email>): Promise<PlatformResult<Email>> {
     try {
       const graphEmail = EmailMapper.toGraphEmail({ ...email, isDraft: true });
-      
-      const response = await this.graphClient.post<any>(
-        '/me/messages',
-        graphEmail.message
-      );
+
+      const response = await this.graphClient.post<any>('/me/messages', graphEmail.message);
 
       const draft = EmailMapper.toDomainEmail(response);
 
       // Cache the draft
-      await this.cacheManager.set(`${this.cacheKeyPrefix}${draft.id}`, draft, 3600);
+      await (this.cacheManager as any).set(`${this.cacheKeyPrefix}${draft.id}`, draft, 3600);
 
       return {
         success: true,
-        data: draft
+        data: draft,
       };
     } catch (error) {
       this.logger.error('Failed to create draft', error);
-      return this.errorHandler.handleError(error);
+      throw error;
     }
   }
 
   /**
    * Reply to an email
    */
-  async replyToEmail(emailId: string, reply: Partial<Email>, replyAll: boolean = false): Promise<PlatformResult<string>> {
+  async replyToEmail(
+    emailId: string,
+    reply: Partial<Email>,
+    replyAll: boolean = false
+  ): Promise<PlatformResult<string>> {
     try {
-      const endpoint = replyAll ? `/me/messages/${emailId}/replyAll` : `/me/messages/${emailId}/reply`;
-      
+      const endpoint = replyAll
+        ? `/me/messages/${emailId}/replyAll`
+        : `/me/messages/${emailId}/reply`;
+
       const replyData = {
         message: {
           body: reply.body,
-          attachments: reply.attachments ? reply.attachments.map(att => EmailMapper['toGraphAttachment'](att)) : undefined
-        }
+          attachments: reply.attachments
+            ? reply.attachments.map(att => EmailMapper['toGraphAttachment'](att))
+            : undefined,
+        },
       };
 
       await this.graphClient.post(endpoint, replyData);
 
       return {
         success: true,
-        data: 'replied'
+        data: 'replied',
       };
     } catch (error) {
       this.logger.error(`Failed to reply to email ${emailId}`, error);
-      return this.errorHandler.handleError(error);
+      throw error;
     }
   }
 
@@ -405,19 +401,19 @@ export class EmailService {
         message: {
           toRecipients: forward.to?.map(addr => EmailMapper['toGraphEmailAddress'](addr)),
           body: forward.body,
-          comment: forward.body?.content
-        }
+          comment: forward.body?.content,
+        },
       };
 
       await this.graphClient.post(`/me/messages/${emailId}/forward`, forwardData);
 
       return {
         success: true,
-        data: 'forwarded'
+        data: 'forwarded',
       };
     } catch (error) {
       this.logger.error(`Failed to forward email ${emailId}`, error);
-      return this.errorHandler.handleError(error);
+      throw error;
     }
   }
 
@@ -426,25 +422,26 @@ export class EmailService {
    */
   private async indexEmail(email: Email): Promise<void> {
     try {
-      await this.chromaDb.addDocuments({
-        collection: 'graph-search-index',
-        documents: [{
-          id: `email_${email.id}`,
-          content: `${email.subject} ${email.body.content}`,
-          metadata: {
-            type: 'email',
-            from: email.from.toString(),
-            to: email.to.map(addr => addr.toString()).join(', '),
-            subject: email.subject,
-            date: email.receivedDateTime.toISOString(),
-            hasAttachments: email.hasAttachments,
-            isRead: email.isRead,
-            isDraft: email.isDraft,
-            importance: email.importance,
-            categories: email.categories.join(', ')
-          }
-        }]
-      });
+      // TODO: Implement email indexing in vector store
+      // await this.chromaDb.addDocuments({
+      //   collection: 'graph-search-index',
+      //   documents: [{
+      //     id: `email_${email.id}`,
+      //     content: `${email.subject} ${email.body.content}`,
+      //     metadata: {
+      //       type: 'email',
+      //       from: email.from.toString(),
+      //       to: email.to.map(addr => addr.toString()).join(', '),
+      //       subject: email.subject,
+      //       date: email.receivedDateTime.toISOString(),
+      //       hasAttachments: email.hasAttachments,
+      //       isRead: email.isRead,
+      //       isDraft: email.isDraft,
+      //       importance: email.importance,
+      //       categories: email.categories.join(', ')
+      //     }
+      //   }]
+      // });
     } catch (error) {
       this.logger.warn(`Failed to index email ${email.id} in ChromaDB`, error);
       // Don't fail the operation if indexing fails
@@ -521,11 +518,11 @@ export class EmailService {
       const response = await this.graphClient.get<any>('/me/mailFolders');
       return {
         success: true,
-        data: response.value || []
+        data: response.value || [],
       };
     } catch (error) {
       this.logger.error('Failed to get email folders', error);
-      return this.errorHandler.handleError(error);
+      throw error;
     }
   }
 
@@ -537,11 +534,11 @@ export class EmailService {
       const response = await this.graphClient.get<any>(`/me/messages/${emailId}/attachments`);
       return {
         success: true,
-        data: response.value || []
+        data: response.value || [],
       };
     } catch (error) {
       this.logger.error(`Failed to get attachments for email ${emailId}`, error);
-      return this.errorHandler.handleError(error);
+      throw error;
     }
   }
 
@@ -557,11 +554,14 @@ export class EmailService {
 
       return {
         success: true,
-        data: Buffer.from(response)
+        data: Buffer.from(response),
       };
     } catch (error) {
-      this.logger.error(`Failed to download attachment ${attachmentId} from email ${emailId}`, error);
-      return this.errorHandler.handleError(error);
+      this.logger.error(
+        `Failed to download attachment ${attachmentId} from email ${emailId}`,
+        error
+      );
+      throw error;
     }
   }
 }

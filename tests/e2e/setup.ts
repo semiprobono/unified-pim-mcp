@@ -4,11 +4,11 @@ import { jest } from '@jest/globals';
 beforeAll(async () => {
   // Set test environment
   process.env.NODE_ENV = 'test';
-  
+
   // Disable real external services in E2E tests
   process.env.MOCK_PLATFORMS = 'true';
   process.env.CACHE_MEMORY_TTL = '1000'; // Short TTL for tests
-  
+
   // Wait for any async setup to complete
   await new Promise(resolve => setTimeout(resolve, 1000));
 });

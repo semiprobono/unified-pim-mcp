@@ -1,7 +1,7 @@
 /**
  * Real-time Performance Monitoring Dashboard for Unified PIM MCP
- * 
- * Provides comprehensive performance metrics, memory monitoring, 
+ *
+ * Provides comprehensive performance metrics, memory monitoring,
  * API call tracking, and ChromaDB query analysis with real-time
  * alerts and optimization recommendations.
  */
@@ -13,7 +13,7 @@ import * as process from 'process';
 
 export interface PerformanceMetrics {
   timestamp: number;
-  
+
   // System metrics
   memory: {
     used: number;
@@ -24,12 +24,12 @@ export interface PerformanceMetrics {
     external: number;
     rss: number;
   };
-  
+
   cpu: {
     usage: number;
     loadAverage: number[];
   };
-  
+
   // Application metrics
   api: {
     totalRequests: number;
@@ -38,7 +38,7 @@ export interface PerformanceMetrics {
     errorRate: number;
     requestsPerSecond: number;
   };
-  
+
   // ChromaDB metrics
   chromadb: {
     totalQueries: number;
@@ -47,7 +47,7 @@ export interface PerformanceMetrics {
     cacheHitRate: number;
     collectionSizes: Record<string, number>;
   };
-  
+
   // GraphClient metrics
   graph: {
     totalCalls: number;
@@ -56,7 +56,7 @@ export interface PerformanceMetrics {
     averageLatency: number;
     circuitBreakerState: string;
   };
-  
+
   // General performance
   uptime: number;
   eventLoopDelay: number;
@@ -103,9 +103,9 @@ export class PerformanceDashboard extends EventEmitter {
   private metrics: PerformanceMetrics;
   private alerts: PerformanceAlert[] = [];
   private isRunning = false;
-  private intervalId?: NodeJS.Timer;
+  private intervalId?: NodeJS.Timeout;
   private startTime = performance.now();
-  
+
   // Tracking variables
   private requestCount = 0;
   private errorCount = 0;
@@ -121,39 +121,41 @@ export class PerformanceDashboard extends EventEmitter {
   private circuitBreakerState = 'closed';
   private gcCollections = 0;
   private gcDuration = 0;
-  
+
   // Real-time tracking
   private activeRequests = new Set<string>();
   private activeQueries = new Set<string>();
   private eventLoopMonitor?: any;
-  
+
   private readonly thresholds: PerformanceThresholds = {
     memory: { warningPercent: 80, criticalPercent: 95 },
     cpu: { warningPercent: 80, criticalPercent: 95 },
     responseTime: { warningMs: 1000, criticalMs: 5000 },
     errorRate: { warningPercent: 5, criticalPercent: 15 },
-    eventLoopDelay: { warningMs: 10, criticalMs: 100 }
+    eventLoopDelay: { warningMs: 10, criticalMs: 100 },
   };
-  
-  constructor(private config: { 
-    updateInterval?: number;
-    retentionPeriod?: number;
-    alertCooldown?: number;
-  } = {}) {
+
+  constructor(
+    private config: {
+      updateInterval?: number;
+      retentionPeriod?: number;
+      alertCooldown?: number;
+    } = {}
+  ) {
     super();
-    
+
     this.config = {
-      updateInterval: 5000,  // 5 seconds
-      retentionPeriod: 300000,  // 5 minutes
-      alertCooldown: 60000,  // 1 minute
-      ...config
+      updateInterval: 5000, // 5 seconds
+      retentionPeriod: 300000, // 5 minutes
+      alertCooldown: 60000, // 1 minute
+      ...config,
     };
-    
+
     this.metrics = this.initializeMetrics();
     this.setupGCMonitoring();
     this.setupEventLoopMonitoring();
   }
-  
+
   private initializeMetrics(): PerformanceMetrics {
     return {
       timestamp: Date.now(),
@@ -164,94 +166,94 @@ export class PerformanceDashboard extends EventEmitter {
         heapUsed: 0,
         heapTotal: 0,
         external: 0,
-        rss: 0
+        rss: 0,
       },
       cpu: {
         usage: 0,
-        loadAverage: []
+        loadAverage: [],
       },
       api: {
         totalRequests: 0,
         activeRequests: 0,
         averageResponseTime: 0,
         errorRate: 0,
-        requestsPerSecond: 0
+        requestsPerSecond: 0,
       },
       chromadb: {
         totalQueries: 0,
         activeQueries: 0,
         averageQueryTime: 0,
         cacheHitRate: 0,
-        collectionSizes: {}
+        collectionSizes: {},
       },
       graph: {
         totalCalls: 0,
         rateLimitHits: 0,
         authRefreshes: 0,
         averageLatency: 0,
-        circuitBreakerState: 'closed'
+        circuitBreakerState: 'closed',
       },
       uptime: 0,
       eventLoopDelay: 0,
       gcMetrics: {
         totalCollections: 0,
-        totalDuration: 0
-      }
+        totalDuration: 0,
+      },
     };
   }
-  
+
   public start(): void {
     if (this.isRunning) {
       return;
     }
-    
+
     this.isRunning = true;
     this.startTime = performance.now();
-    
+
     // Start periodic metrics collection
     this.intervalId = setInterval(() => {
       this.collectMetrics();
       this.checkThresholds();
       this.emit('metrics', this.metrics);
     }, this.config.updateInterval);
-    
+
     // Clean up old alerts periodically
     setInterval(() => {
       this.cleanupAlerts();
     }, this.config.retentionPeriod!);
-    
+
     this.emit('started');
   }
-  
+
   public stop(): void {
     if (!this.isRunning) {
       return;
     }
-    
+
     this.isRunning = false;
-    
+
     if (this.intervalId) {
       clearInterval(this.intervalId);
       this.intervalId = undefined;
     }
-    
+
     if (this.eventLoopMonitor) {
       clearInterval(this.eventLoopMonitor);
       this.eventLoopMonitor = undefined;
     }
-    
+
     this.emit('stopped');
   }
-  
+
   private collectMetrics(): void {
     const memUsage = process.memoryUsage();
     const cpuUsage = process.cpuUsage();
     const totalMemory = os.totalmem();
     const freeMemory = os.freemem();
-    
+
     this.metrics = {
       timestamp: Date.now(),
-      
+
       memory: {
         used: totalMemory - freeMemory,
         free: freeMemory,
@@ -259,143 +261,183 @@ export class PerformanceDashboard extends EventEmitter {
         heapUsed: memUsage.heapUsed,
         heapTotal: memUsage.heapTotal,
         external: memUsage.external,
-        rss: memUsage.rss
+        rss: memUsage.rss,
       },
-      
+
       cpu: {
         usage: (cpuUsage.user + cpuUsage.system) / 1000000, // Convert to seconds
-        loadAverage: os.loadavg()
+        loadAverage: os.loadavg(),
       },
-      
+
       api: {
         totalRequests: this.requestCount,
         activeRequests: this.activeRequests.size,
         averageResponseTime: this.calculateAverageResponseTime(),
         errorRate: this.calculateErrorRate(),
-        requestsPerSecond: this.calculateRequestsPerSecond()
+        requestsPerSecond: this.calculateRequestsPerSecond(),
       },
-      
+
       chromadb: {
         totalQueries: this.chromaQueryCount,
         activeQueries: this.activeQueries.size,
         averageQueryTime: this.calculateAverageQueryTime(),
         cacheHitRate: this.calculateCacheHitRate(),
-        collectionSizes: {} // Will be populated by ChromaDB adapter
+        collectionSizes: {}, // Will be populated by ChromaDB adapter
       },
-      
+
       graph: {
         totalCalls: this.graphCallCount,
         rateLimitHits: this.rateLimitHits,
         authRefreshes: this.authRefreshCount,
         averageLatency: this.calculateAverageGraphLatency(),
-        circuitBreakerState: this.circuitBreakerState
+        circuitBreakerState: this.circuitBreakerState,
       },
-      
+
       uptime: performance.now() - this.startTime,
       eventLoopDelay: this.getEventLoopDelay(),
-      
+
       gcMetrics: {
         totalCollections: this.gcCollections,
-        totalDuration: this.gcDuration
-      }
+        totalDuration: this.gcDuration,
+      },
     };
   }
-  
+
   private checkThresholds(): void {
     const alerts: PerformanceAlert[] = [];
-    
+
     // Memory threshold checks
     const memoryUsagePercent = (this.metrics.memory.used / this.metrics.memory.total) * 100;
     if (memoryUsagePercent > this.thresholds.memory.criticalPercent) {
-      alerts.push(this.createAlert('critical', 'memory', 
-        `Memory usage critically high: ${memoryUsagePercent.toFixed(1)}%`,
-        memoryUsagePercent, this.thresholds.memory.criticalPercent,
-        [
-          'Consider increasing available memory',
-          'Check for memory leaks in the application',
-          'Review ChromaDB cache size configuration',
-          'Enable garbage collection optimization'
-        ]
-      ));
+      alerts.push(
+        this.createAlert(
+          'critical',
+          'memory',
+          `Memory usage critically high: ${memoryUsagePercent.toFixed(1)}%`,
+          memoryUsagePercent,
+          this.thresholds.memory.criticalPercent,
+          [
+            'Consider increasing available memory',
+            'Check for memory leaks in the application',
+            'Review ChromaDB cache size configuration',
+            'Enable garbage collection optimization',
+          ]
+        )
+      );
     } else if (memoryUsagePercent > this.thresholds.memory.warningPercent) {
-      alerts.push(this.createAlert('warning', 'memory',
-        `Memory usage high: ${memoryUsagePercent.toFixed(1)}%`,
-        memoryUsagePercent, this.thresholds.memory.warningPercent,
-        [
-          'Monitor memory usage trend',
-          'Consider optimizing data structures',
-          'Review caching strategies'
-        ]
-      ));
+      alerts.push(
+        this.createAlert(
+          'warning',
+          'memory',
+          `Memory usage high: ${memoryUsagePercent.toFixed(1)}%`,
+          memoryUsagePercent,
+          this.thresholds.memory.warningPercent,
+          [
+            'Monitor memory usage trend',
+            'Consider optimizing data structures',
+            'Review caching strategies',
+          ]
+        )
+      );
     }
-    
+
     // Response time checks
     if (this.metrics.api.averageResponseTime > this.thresholds.responseTime.criticalMs) {
-      alerts.push(this.createAlert('critical', 'api',
-        `API response time critically slow: ${this.metrics.api.averageResponseTime.toFixed(0)}ms`,
-        this.metrics.api.averageResponseTime, this.thresholds.responseTime.criticalMs,
-        [
-          'Check database query performance',
-          'Review API endpoint efficiency',
-          'Consider implementing caching',
-          'Monitor external service latency'
-        ]
-      ));
+      alerts.push(
+        this.createAlert(
+          'critical',
+          'api',
+          `API response time critically slow: ${this.metrics.api.averageResponseTime.toFixed(0)}ms`,
+          this.metrics.api.averageResponseTime,
+          this.thresholds.responseTime.criticalMs,
+          [
+            'Check database query performance',
+            'Review API endpoint efficiency',
+            'Consider implementing caching',
+            'Monitor external service latency',
+          ]
+        )
+      );
     } else if (this.metrics.api.averageResponseTime > this.thresholds.responseTime.warningMs) {
-      alerts.push(this.createAlert('warning', 'api',
-        `API response time slow: ${this.metrics.api.averageResponseTime.toFixed(0)}ms`,
-        this.metrics.api.averageResponseTime, this.thresholds.responseTime.warningMs,
-        [
-          'Monitor response time trends',
-          'Consider query optimization',
-          'Review concurrent request handling'
-        ]
-      ));
+      alerts.push(
+        this.createAlert(
+          'warning',
+          'api',
+          `API response time slow: ${this.metrics.api.averageResponseTime.toFixed(0)}ms`,
+          this.metrics.api.averageResponseTime,
+          this.thresholds.responseTime.warningMs,
+          [
+            'Monitor response time trends',
+            'Consider query optimization',
+            'Review concurrent request handling',
+          ]
+        )
+      );
     }
-    
+
     // Error rate checks
     if (this.metrics.api.errorRate > this.thresholds.errorRate.criticalPercent) {
-      alerts.push(this.createAlert('critical', 'api',
-        `API error rate critically high: ${this.metrics.api.errorRate.toFixed(1)}%`,
-        this.metrics.api.errorRate, this.thresholds.errorRate.criticalPercent,
-        [
-          'Investigate error patterns',
-          'Check external service health',
-          'Review error handling logic',
-          'Consider circuit breaker implementation'
-        ]
-      ));
+      alerts.push(
+        this.createAlert(
+          'critical',
+          'api',
+          `API error rate critically high: ${this.metrics.api.errorRate.toFixed(1)}%`,
+          this.metrics.api.errorRate,
+          this.thresholds.errorRate.criticalPercent,
+          [
+            'Investigate error patterns',
+            'Check external service health',
+            'Review error handling logic',
+            'Consider circuit breaker implementation',
+          ]
+        )
+      );
     } else if (this.metrics.api.errorRate > this.thresholds.errorRate.warningPercent) {
-      alerts.push(this.createAlert('warning', 'api',
-        `API error rate elevated: ${this.metrics.api.errorRate.toFixed(1)}%`,
-        this.metrics.api.errorRate, this.thresholds.errorRate.warningPercent,
-        ['Monitor error patterns', 'Check service dependencies']
-      ));
+      alerts.push(
+        this.createAlert(
+          'warning',
+          'api',
+          `API error rate elevated: ${this.metrics.api.errorRate.toFixed(1)}%`,
+          this.metrics.api.errorRate,
+          this.thresholds.errorRate.warningPercent,
+          ['Monitor error patterns', 'Check service dependencies']
+        )
+      );
     }
-    
+
     // Event loop delay checks
     if (this.metrics.eventLoopDelay > this.thresholds.eventLoopDelay.criticalMs) {
-      alerts.push(this.createAlert('critical', 'eventloop',
-        `Event loop delay critically high: ${this.metrics.eventLoopDelay.toFixed(1)}ms`,
-        this.metrics.eventLoopDelay, this.thresholds.eventLoopDelay.criticalMs,
-        [
-          'Check for blocking synchronous operations',
-          'Review CPU-intensive tasks',
-          'Consider worker threads for heavy computation',
-          'Optimize database query performance'
-        ]
-      ));
+      alerts.push(
+        this.createAlert(
+          'critical',
+          'eventloop',
+          `Event loop delay critically high: ${this.metrics.eventLoopDelay.toFixed(1)}ms`,
+          this.metrics.eventLoopDelay,
+          this.thresholds.eventLoopDelay.criticalMs,
+          [
+            'Check for blocking synchronous operations',
+            'Review CPU-intensive tasks',
+            'Consider worker threads for heavy computation',
+            'Optimize database query performance',
+          ]
+        )
+      );
     }
-    
+
     // Add new alerts
     for (const alert of alerts) {
       this.addAlert(alert);
     }
   }
-  
-  private createAlert(type: 'warning' | 'critical' | 'info', component: string, 
-                     message: string, value: number, threshold: number,
-                     recommendations: string[] = []): PerformanceAlert {
+
+  private createAlert(
+    type: 'warning' | 'critical' | 'info',
+    component: string,
+    message: string,
+    value: number,
+    threshold: number,
+    recommendations: string[] = []
+  ): PerformanceAlert {
     return {
       type,
       component,
@@ -403,171 +445,164 @@ export class PerformanceDashboard extends EventEmitter {
       value,
       threshold,
       timestamp: Date.now(),
-      recommendations
+      recommendations,
     };
   }
-  
+
   private addAlert(alert: PerformanceAlert): void {
     // Check if similar alert exists within cooldown period
-    const similarAlert = this.alerts.find(a => 
-      a.component === alert.component &&
-      a.type === alert.type &&
-      Date.now() - a.timestamp < this.config.alertCooldown!
+    const similarAlert = this.alerts.find(
+      a =>
+        a.component === alert.component &&
+        a.type === alert.type &&
+        Date.now() - a.timestamp < this.config.alertCooldown!
     );
-    
+
     if (!similarAlert) {
       this.alerts.push(alert);
       this.emit('alert', alert);
     }
   }
-  
+
   private cleanupAlerts(): void {
     const cutoff = Date.now() - this.config.retentionPeriod!;
     this.alerts = this.alerts.filter(alert => alert.timestamp > cutoff);
   }
-  
+
   // Calculation methods
   private calculateAverageResponseTime(): number {
     if (this.responseTimeSamples.length === 0) return 0;
     const sum = this.responseTimeSamples.reduce((a, b) => a + b, 0);
     return sum / this.responseTimeSamples.length;
   }
-  
+
   private calculateErrorRate(): number {
     if (this.requestCount === 0) return 0;
     return (this.errorCount / this.requestCount) * 100;
   }
-  
+
   private calculateRequestsPerSecond(): number {
     const uptimeSeconds = this.metrics.uptime / 1000;
     return uptimeSeconds > 0 ? this.requestCount / uptimeSeconds : 0;
   }
-  
+
   private calculateAverageQueryTime(): number {
     if (this.chromaQueryTimes.length === 0) return 0;
     const sum = this.chromaQueryTimes.reduce((a, b) => a + b, 0);
     return sum / this.chromaQueryTimes.length;
   }
-  
+
   private calculateCacheHitRate(): number {
     const total = this.chromaCacheHits + this.chromaCacheMisses;
     return total > 0 ? (this.chromaCacheHits / total) * 100 : 0;
   }
-  
+
   private calculateAverageGraphLatency(): number {
     if (this.graphLatencies.length === 0) return 0;
     const sum = this.graphLatencies.reduce((a, b) => a + b, 0);
     return sum / this.graphLatencies.length;
   }
-  
+
   private getEventLoopDelay(): number {
     // This would be set by the event loop monitor
     return 0; // Placeholder
   }
-  
+
   private setupGCMonitoring(): void {
     if (typeof process.on === 'function') {
-      // Monitor garbage collection
-      const originalEmit = process.emit;
-      process.emit = function(event: string, ...args: any[]) {
-        if (event === 'gc') {
-          // GC event occurred
-        }
-        return originalEmit.apply(process, arguments as any);
-      };
+      // TODO: Implement GC monitoring using process.on('gc') when available
+      // Note: GC monitoring requires running with --expose-gc flag
     }
   }
-  
+
   private setupEventLoopMonitoring(): void {
     let start = process.hrtime.bigint();
-    
+
     this.eventLoopMonitor = setInterval(() => {
       const end = process.hrtime.bigint();
       const delay = Number(end - start) / 1000000; // Convert to milliseconds
-      
+
       // Update event loop delay (this is a simplified implementation)
       // In a real implementation, you'd use more sophisticated monitoring
-      
+
       start = process.hrtime.bigint();
     }, 1000);
   }
-  
+
   // Public tracking methods for other components to call
   public trackApiRequest(id: string): void {
     this.activeRequests.add(id);
     this.requestCount++;
   }
-  
+
   public completeApiRequest(id: string, responseTime: number, isError = false): void {
     this.activeRequests.delete(id);
     this.responseTimeSamples.push(responseTime);
-    
+
     // Keep only last 100 samples for memory efficiency
     if (this.responseTimeSamples.length > 100) {
       this.responseTimeSamples.shift();
     }
-    
+
     if (isError) {
       this.errorCount++;
     }
   }
-  
+
   public trackChromaQuery(id: string): void {
     this.activeQueries.add(id);
     this.chromaQueryCount++;
   }
-  
+
   public completeChromaQuery(id: string, queryTime: number, cacheHit = false): void {
     this.activeQueries.delete(id);
     this.chromaQueryTimes.push(queryTime);
-    
+
     if (this.chromaQueryTimes.length > 100) {
       this.chromaQueryTimes.shift();
     }
-    
+
     if (cacheHit) {
       this.chromaCacheHits++;
     } else {
       this.chromaCacheMisses++;
     }
   }
-  
+
   public trackGraphCall(latency: number): void {
     this.graphCallCount++;
     this.graphLatencies.push(latency);
-    
+
     if (this.graphLatencies.length > 100) {
       this.graphLatencies.shift();
     }
   }
-  
+
   public recordRateLimitHit(): void {
     this.rateLimitHits++;
   }
-  
+
   public recordAuthRefresh(): void {
     this.authRefreshCount++;
   }
-  
+
   public updateCircuitBreakerState(state: string): void {
     this.circuitBreakerState = state;
   }
-  
+
   public updateCollectionSizes(sizes: Record<string, number>): void {
     this.metrics.chromadb.collectionSizes = { ...sizes };
   }
-  
+
   // Public getters
   public getCurrentMetrics(): PerformanceMetrics {
     return { ...this.metrics };
   }
-  
+
   public getRecentAlerts(count = 10): PerformanceAlert[] {
-    return this.alerts
-      .sort((a, b) => b.timestamp - a.timestamp)
-      .slice(0, count);
+    return this.alerts.sort((a, b) => b.timestamp - a.timestamp).slice(0, count);
   }
-  
+
   public getMetricsSummary(): any {
     return {
       status: this.isRunning ? 'running' : 'stopped',
@@ -576,15 +611,15 @@ export class PerformanceDashboard extends EventEmitter {
       totalQueries: this.metrics.chromadb.totalQueries,
       totalGraphCalls: this.metrics.graph.totalCalls,
       alertCount: this.alerts.length,
-      lastUpdate: this.metrics.timestamp
+      lastUpdate: this.metrics.timestamp,
     };
   }
-  
+
   // Dashboard HTML generation for development
   public generateDashboardHTML(): string {
     const metrics = this.getCurrentMetrics();
     const alerts = this.getRecentAlerts(5);
-    
+
     return `
 <!DOCTYPE html>
 <html>
@@ -745,17 +780,25 @@ export class PerformanceDashboard extends EventEmitter {
         </div>
     </div>
     
-    ${alerts.length > 0 ? `
+    ${
+      alerts.length > 0
+        ? `
     <div class="metric-card">
         <div class="metric-title">⚠️ Recent Alerts</div>
-        ${alerts.map(alert => `
+        ${alerts
+          .map(
+            alert => `
         <div class="alert ${alert.type}">
             <strong>${alert.component.toUpperCase()}:</strong> ${alert.message}
             ${alert.recommendations ? `<br><small>💡 ${alert.recommendations[0]}</small>` : ''}
         </div>
-        `).join('')}
+        `
+          )
+          .join('')}
     </div>
-    ` : ''}
+    `
+        : ''
+    }
     
     <div class="refresh-info">
         📡 Last updated: ${new Date(metrics.timestamp).toLocaleTimeString()} | Auto-refresh in 5s
@@ -763,7 +806,7 @@ export class PerformanceDashboard extends EventEmitter {
 </body>
 </html>`;
   }
-  
+
   private getStatusClass(value: number, warning: number, critical: number): string {
     if (value >= critical) return 'status-critical';
     if (value >= warning) return 'status-warning';

@@ -5,10 +5,10 @@ import { Logger } from '../../../../shared/logging/Logger';
  * Rate limit configuration
  */
 export interface RateLimitConfig {
-  maxRequests: number;      // Maximum requests allowed
-  windowMs: number;         // Time window in milliseconds
-  maxConcurrent?: number;   // Maximum concurrent requests
-  minTime?: number;         // Minimum time between requests in ms
+  maxRequests: number; // Maximum requests allowed
+  windowMs: number; // Time window in milliseconds
+  maxConcurrent?: number; // Maximum concurrent requests
+  minTime?: number; // Minimum time between requests in ms
 }
 
 /**
@@ -38,7 +38,7 @@ export class RateLimiter {
     logger: Logger
   ) {
     this.logger = logger;
-    
+
     // Initialize p-queue for request queuing
     this.queue = new PQueue({
       concurrency: config.maxConcurrent || 10,
@@ -66,7 +66,9 @@ export class RateLimiter {
       if (this.globalRateLimitStatus.remaining <= 0) {
         const resetTime = this.globalRateLimitStatus.reset.getTime();
         if (now < resetTime) {
-          this.logger.warn(`Global rate limit exceeded. Reset at: ${this.globalRateLimitStatus.reset}`);
+          this.logger.warn(
+            `Global rate limit exceeded. Reset at: ${this.globalRateLimitStatus.reset}`
+          );
           return false;
         } else {
           // Reset time has passed, clear the status
@@ -77,7 +79,7 @@ export class RateLimiter {
 
     // Get or create request count for endpoint
     let requestData = this.requestCounts.get(endpoint);
-    
+
     if (!requestData) {
       requestData = { count: 0, windowStart: now };
       this.requestCounts.set(endpoint, requestData);
@@ -99,7 +101,7 @@ export class RateLimiter {
 
     // Increment counter
     requestData.count++;
-    
+
     return true;
   }
 
@@ -111,13 +113,13 @@ export class RateLimiter {
     endpoint: string = 'global',
     retries: number = 3
   ): Promise<T> {
-    return this.queue.add(async (): Promise<T> => {
+    return this.queue.add(async () => {
       let lastError: Error | undefined;
-      
+
       for (let attempt = 0; attempt < retries; attempt++) {
         // Check rate limit
         const canProceed = await this.checkRateLimit(endpoint);
-        
+
         if (!canProceed) {
           // Calculate wait time
           const waitTime = this.calculateWaitTime(endpoint);
@@ -129,27 +131,27 @@ export class RateLimiter {
         try {
           // Execute the function
           const result = await fn();
-          
+
           // Reset consecutive failures on success
           this.resetFailureCount(endpoint);
-          
+
           return result;
         } catch (error: any) {
           lastError = error;
-          
+
           // Check if it's a rate limit error (429)
           if (error.response?.status === 429) {
             this.handleRateLimitResponse(error.response);
-            
+
             const retryAfter = this.parseRetryAfter(error.response.headers);
             this.logger.warn(`Rate limit hit (429). Retry after ${retryAfter}ms`);
-            
+
             if (attempt < retries - 1) {
               await this.delay(retryAfter);
               continue;
             }
           }
-          
+
           // For other errors, use exponential backoff
           if (attempt < retries - 1) {
             const backoffTime = this.calculateExponentialBackoff(attempt);
@@ -159,10 +161,10 @@ export class RateLimiter {
           }
         }
       }
-      
+
       // All retries exhausted
       throw lastError || new Error('Rate limit exceeded and all retries exhausted');
-    });
+    }) as Promise<T>;
   }
 
   /**
@@ -200,7 +202,7 @@ export class RateLimiter {
    */
   private parseRetryAfter(headers: Record<string, string>): number {
     const retryAfter = headers['retry-after'];
-    
+
     if (!retryAfter) {
       return 60000; // Default to 1 minute
     }
@@ -225,7 +227,7 @@ export class RateLimiter {
    */
   private calculateWaitTime(endpoint: string): number {
     const requestData = this.requestCounts.get(endpoint);
-    
+
     if (!requestData) {
       return 1000; // Default 1 second
     }
@@ -233,10 +235,10 @@ export class RateLimiter {
     const windowMs = this.config.windowMs || this.DEFAULT_WINDOW_MS;
     const now = Date.now();
     const timeUntilReset = windowMs - (now - requestData.windowStart);
-    
+
     // Add some jitter to prevent thundering herd
     const jitter = Math.random() * 1000;
-    
+
     return Math.max(1000, timeUntilReset + jitter);
   }
 
@@ -246,11 +248,11 @@ export class RateLimiter {
   private calculateExponentialBackoff(attempt: number): number {
     const baseDelay = 1000; // 1 second
     const maxDelay = 60000; // 1 minute
-    
+
     // Calculate delay with exponential backoff and jitter
     const delay = Math.min(baseDelay * Math.pow(2, attempt), maxDelay);
     const jitter = Math.random() * delay * 0.1; // 10% jitter
-    
+
     return delay + jitter;
   }
 
@@ -275,7 +277,7 @@ export class RateLimiter {
     setInterval(() => {
       const now = Date.now();
       const windowMs = this.config.windowMs || this.DEFAULT_WINDOW_MS;
-      
+
       // Remove entries older than the window
       for (const [endpoint, data] of this.requestCounts.entries()) {
         if (now - data.windowStart > windowMs * 2) {

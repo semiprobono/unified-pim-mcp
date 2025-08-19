@@ -2,21 +2,21 @@
  * Mock implementations for MSAL components
  */
 
-import { 
-  ConfidentialClientApplication, 
-  PublicClientApplication,
-  AuthenticationResult,
+import {
   AccountInfo,
-  InteractionRequiredAuthError
+  AuthenticationResult,
+  ConfidentialClientApplication,
+  InteractionRequiredAuthError,
+  PublicClientApplication,
 } from '@azure/msal-node';
-import { 
-  mockAuthenticationResult, 
+import {
   mockAccountInfo,
-  mockRefreshTokenResult,
-  mockSilentTokenResult,
+  mockAuthenticationResult,
   mockInteractionRequiredError,
   mockInvalidGrantError,
-  mockNetworkError 
+  mockNetworkError,
+  mockRefreshTokenResult,
+  mockSilentTokenResult,
 } from '../fixtures/msalResponses.js';
 
 /**
@@ -43,12 +43,12 @@ export class MockMsalClientApplication {
     if (this.shouldFailAuthCode) {
       throw mockInvalidGrantError;
     }
-    
+
     // Add account to cache
     if (mockAuthenticationResult.account) {
       this.mockAccounts.push(mockAuthenticationResult.account);
     }
-    
+
     return mockAuthenticationResult;
   }
 
@@ -57,7 +57,10 @@ export class MockMsalClientApplication {
       throw mockNetworkError;
     }
     if (this.shouldFailSilent) {
-      throw new InteractionRequiredAuthError('interaction_required', mockInteractionRequiredError.errorMessage);
+      throw new InteractionRequiredAuthError(
+        'interaction_required',
+        mockInteractionRequiredError.errorMessage
+      );
     }
     return mockSilentTokenResult;
   }
@@ -112,12 +115,14 @@ export class MockMsalClientApplication {
 /**
  * Mock ConfidentialClientApplication
  */
-export const mockConfidentialClientApplication = new MockMsalClientApplication() as unknown as ConfidentialClientApplication;
+export const mockConfidentialClientApplication =
+  new MockMsalClientApplication() as unknown as ConfidentialClientApplication;
 
 /**
  * Mock PublicClientApplication
  */
-export const mockPublicClientApplication = new MockMsalClientApplication() as unknown as PublicClientApplication;
+export const mockPublicClientApplication =
+  new MockMsalClientApplication() as unknown as PublicClientApplication;
 
 /**
  * Factory function to create fresh mock client
@@ -131,7 +136,9 @@ export const createMockMsalClient = (type: 'confidential' | 'public' = 'confiden
  * Jest mock for MSAL module
  */
 export const msalNodeMock = {
-  ConfidentialClientApplication: jest.fn().mockImplementation(() => mockConfidentialClientApplication),
+  ConfidentialClientApplication: jest
+    .fn()
+    .mockImplementation(() => mockConfidentialClientApplication),
   PublicClientApplication: jest.fn().mockImplementation(() => mockPublicClientApplication),
   InteractionRequiredAuthError: jest.fn().mockImplementation((message: string) => ({
     name: 'InteractionRequiredAuthError',
@@ -173,10 +180,18 @@ export const resetMsalMocks = () => {
   jest.clearAllMocks();
   (mockConfidentialClientApplication as unknown as MockMsalClientApplication).clearMockAccounts();
   (mockPublicClientApplication as unknown as MockMsalClientApplication).clearMockAccounts();
-  (mockConfidentialClientApplication as unknown as MockMsalClientApplication).setShouldFailSilent(false);
-  (mockConfidentialClientApplication as unknown as MockMsalClientApplication).setShouldFailRefresh(false);
-  (mockConfidentialClientApplication as unknown as MockMsalClientApplication).setShouldFailAuthCode(false);
-  (mockConfidentialClientApplication as unknown as MockMsalClientApplication).setNetworkError(false);
+  (mockConfidentialClientApplication as unknown as MockMsalClientApplication).setShouldFailSilent(
+    false
+  );
+  (mockConfidentialClientApplication as unknown as MockMsalClientApplication).setShouldFailRefresh(
+    false
+  );
+  (mockConfidentialClientApplication as unknown as MockMsalClientApplication).setShouldFailAuthCode(
+    false
+  );
+  (mockConfidentialClientApplication as unknown as MockMsalClientApplication).setNetworkError(
+    false
+  );
 };
 
 /**
@@ -185,27 +200,37 @@ export const resetMsalMocks = () => {
 export const msalTestScenarios = {
   success: () => {
     resetMsalMocks();
-    (mockConfidentialClientApplication as unknown as MockMsalClientApplication).addMockAccount(mockAccountInfo);
+    (mockConfidentialClientApplication as unknown as MockMsalClientApplication).addMockAccount(
+      mockAccountInfo
+    );
   },
-  
+
   networkFailure: () => {
     resetMsalMocks();
-    (mockConfidentialClientApplication as unknown as MockMsalClientApplication).setNetworkError(true);
+    (mockConfidentialClientApplication as unknown as MockMsalClientApplication).setNetworkError(
+      true
+    );
   },
-  
+
   interactionRequired: () => {
     resetMsalMocks();
-    (mockConfidentialClientApplication as unknown as MockMsalClientApplication).setShouldFailSilent(true);
+    (mockConfidentialClientApplication as unknown as MockMsalClientApplication).setShouldFailSilent(
+      true
+    );
   },
-  
+
   refreshTokenExpired: () => {
     resetMsalMocks();
-    (mockConfidentialClientApplication as unknown as MockMsalClientApplication).setShouldFailRefresh(true);
+    (
+      mockConfidentialClientApplication as unknown as MockMsalClientApplication
+    ).setShouldFailRefresh(true);
   },
-  
+
   invalidAuthCode: () => {
     resetMsalMocks();
-    (mockConfidentialClientApplication as unknown as MockMsalClientApplication).setShouldFailAuthCode(true);
+    (
+      mockConfidentialClientApplication as unknown as MockMsalClientApplication
+    ).setShouldFailAuthCode(true);
   },
 };
 
@@ -224,14 +249,14 @@ export const mockTokenCache = {
 export const msalPerformanceHelpers = {
   simulateSlowResponse: (delayMs: number = 1000) => {
     const originalAcquireToken = (mockConfidentialClientApplication as any).acquireTokenSilent;
-    (mockConfidentialClientApplication as any).acquireTokenSilent = jest.fn().mockImplementation(
-      async (request: any) => {
+    (mockConfidentialClientApplication as any).acquireTokenSilent = jest
+      .fn()
+      .mockImplementation(async (request: any) => {
         await new Promise(resolve => setTimeout(resolve, delayMs));
         return originalAcquireToken.call(mockConfidentialClientApplication, request);
-      }
-    );
+      });
   },
-  
+
   simulateRateLimitedResponse: () => {
     (mockConfidentialClientApplication as any).acquireTokenSilent = jest.fn().mockRejectedValue({
       name: 'ServerError',

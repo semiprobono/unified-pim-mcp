@@ -1,6 +1,6 @@
 /**
  * Jest Global Setup File
- * 
+ *
  * This file runs before any tests and sets up the global test environment.
  * It's loaded before setupFilesAfterEnv and runs once per test run.
  */
@@ -55,26 +55,26 @@ declare global {
 // Custom Jest matchers
 expect.extend({
   toBeValidUnifiedId(received: unknown) {
-    const pass = 
+    const pass =
       typeof received === 'object' &&
       received !== null &&
       'platform' in received &&
       'platformId' in received &&
       'entityType' in received;
-    
+
     return {
-      message: () => 
-        pass 
+      message: () =>
+        pass
           ? `Expected ${received} not to be a valid UnifiedId`
           : `Expected ${received} to be a valid UnifiedId`,
       pass,
     };
   },
-  
+
   toBeValidEmail(received: string) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const pass = emailRegex.test(received);
-    
+
     return {
       message: () =>
         pass
@@ -88,7 +88,7 @@ expect.extend({
     // This would implement platform-specific schema validation
     // For now, just check if it's an object
     const pass = typeof received === 'object' && received !== null;
-    
+
     return {
       message: () =>
         pass

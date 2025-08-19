@@ -4,7 +4,7 @@
 export class PhoneNumber {
   // Basic phone number regex (international format)
   private readonly phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
-  
+
   // More comprehensive regex for various formats
   private readonly phoneRegexLoose = /^[\+]?[\(\)]?[\d\s\-\(\)\.]{7,20}$/;
 
@@ -52,7 +52,10 @@ export class PhoneNumber {
   /**
    * Creates a primary phone number
    */
-  static primary(phone: string, type: 'home' | 'work' | 'mobile' | 'fax' | 'other' = 'mobile'): PhoneNumber {
+  static primary(
+    phone: string,
+    type: 'home' | 'work' | 'mobile' | 'fax' | 'other' = 'mobile'
+  ): PhoneNumber {
     return new PhoneNumber(phone, type, true);
   }
 
@@ -69,17 +72,17 @@ export class PhoneNumber {
   private isValid(phone: string): boolean {
     // Use strict regex for normalized numbers
     const normalized = this.normalize(phone);
-    
+
     // Must have at least 7 digits (minimum for valid phone numbers)
     if (normalized.replace(/\+/, '').length < 7) {
       return false;
     }
-    
+
     // Must not exceed 15 digits (international standard)
     if (normalized.replace(/\+/, '').length > 15) {
       return false;
     }
-    
+
     return this.phoneRegex.test(normalized) || this.phoneRegexLoose.test(phone);
   }
 
@@ -111,41 +114,41 @@ export class PhoneNumber {
     if (!this.isInternational) {
       return undefined;
     }
-    
+
     const digits = this.digitsOnly;
-    
+
     // Common country codes
     const countryCodes: Record<string, string> = {
-      '1': 'US/CA',    // US/Canada
-      '44': 'GB',      // UK
-      '33': 'FR',      // France
-      '49': 'DE',      // Germany
-      '39': 'IT',      // Italy
-      '34': 'ES',      // Spain
-      '31': 'NL',      // Netherlands
-      '46': 'SE',      // Sweden
-      '47': 'NO',      // Norway
-      '45': 'DK',      // Denmark
-      '41': 'CH',      // Switzerland
-      '43': 'AT',      // Austria
-      '32': 'BE',      // Belgium
-      '351': 'PT',     // Portugal
-      '353': 'IE',     // Ireland
-      '358': 'FI',     // Finland
-      '81': 'JP',      // Japan
-      '86': 'CN',      // China
-      '91': 'IN',      // India
-      '61': 'AU',      // Australia
-      '64': 'NZ',      // New Zealand
+      '1': 'US/CA', // US/Canada
+      '44': 'GB', // UK
+      '33': 'FR', // France
+      '49': 'DE', // Germany
+      '39': 'IT', // Italy
+      '34': 'ES', // Spain
+      '31': 'NL', // Netherlands
+      '46': 'SE', // Sweden
+      '47': 'NO', // Norway
+      '45': 'DK', // Denmark
+      '41': 'CH', // Switzerland
+      '43': 'AT', // Austria
+      '32': 'BE', // Belgium
+      '351': 'PT', // Portugal
+      '353': 'IE', // Ireland
+      '358': 'FI', // Finland
+      '81': 'JP', // Japan
+      '86': 'CN', // China
+      '91': 'IN', // India
+      '61': 'AU', // Australia
+      '64': 'NZ', // New Zealand
     };
-    
+
     // Try different length prefixes
     for (const [code, country] of Object.entries(countryCodes)) {
       if (digits.startsWith(code)) {
         return country;
       }
     }
-    
+
     return this.countryCode;
   }
 
@@ -154,7 +157,7 @@ export class PhoneNumber {
    */
   get formatted(): string {
     const digits = this.digitsOnly;
-    
+
     // US/Canada formatting
     if (digits.length === 10 || (digits.length === 11 && digits.startsWith('1'))) {
       const phoneDigits = digits.length === 11 ? digits.substring(1) : digits;
@@ -163,7 +166,7 @@ export class PhoneNumber {
       const number = phoneDigits.substring(6);
       return `(${area}) ${exchange}-${number}`;
     }
-    
+
     // International formatting
     if (this.isInternational) {
       const countryCode = this.detectedCountryCode;
@@ -173,7 +176,7 @@ export class PhoneNumber {
       }
       return `+${digits}`;
     }
-    
+
     // Default formatting with spaces every 3-4 digits
     if (digits.length <= 7) {
       return digits;
@@ -192,7 +195,8 @@ export class PhoneNumber {
   private formatInternationalNumber(digits: string): string {
     if (digits.length <= 4) return digits;
     if (digits.length <= 7) return `${digits.substring(0, 3)} ${digits.substring(3)}`;
-    if (digits.length <= 10) return `${digits.substring(0, 3)} ${digits.substring(3, 6)} ${digits.substring(6)}`;
+    if (digits.length <= 10)
+      return `${digits.substring(0, 3)} ${digits.substring(3, 6)} ${digits.substring(6)}`;
     return digits.replace(/(\d{3})(?=\d)/g, '$1 ');
   }
 
@@ -225,22 +229,44 @@ export class PhoneNumber {
    */
   get isLikelyMobile(): boolean {
     if (this.type === 'mobile') return true;
-    
+
     const digits = this.digitsOnly;
-    
+
     // US mobile prefixes (rough heuristic)
     if (digits.length === 10 || (digits.length === 11 && digits.startsWith('1'))) {
       const phoneDigits = digits.length === 11 ? digits.substring(1) : digits;
       const areaCode = phoneDigits.substring(0, 3);
       const exchange = phoneDigits.substring(3, 6);
-      
+
       // Some known mobile area codes and exchanges
-      const mobileAreaCodes = ['201', '202', '212', '213', '214', '215', '216', '217', '218', '219'];
-      const mobileExchanges = ['300', '301', '302', '303', '304', '305', '306', '307', '308', '309'];
-      
+      const mobileAreaCodes = [
+        '201',
+        '202',
+        '212',
+        '213',
+        '214',
+        '215',
+        '216',
+        '217',
+        '218',
+        '219',
+      ];
+      const mobileExchanges = [
+        '300',
+        '301',
+        '302',
+        '303',
+        '304',
+        '305',
+        '306',
+        '307',
+        '308',
+        '309',
+      ];
+
       return mobileAreaCodes.includes(areaCode) || mobileExchanges.includes(exchange);
     }
-    
+
     return false;
   }
 
@@ -293,11 +319,11 @@ export class PhoneNumber {
     if (this.isLikelyMobile) {
       return 'mobile';
     }
-    
+
     if (this.extension) {
       return 'work';
     }
-    
+
     // Default based on current conventions
     return 'mobile';
   }
@@ -307,29 +333,29 @@ export class PhoneNumber {
    */
   validate(): { isValid: boolean; errors: string[] } {
     const errors: string[] = [];
-    
+
     if (!this.number || this.number.trim().length === 0) {
       errors.push('Phone number cannot be empty');
     }
-    
+
     const normalized = this.normalized;
     const digits = this.digitsOnly;
-    
+
     if (digits.length < 7) {
       errors.push('Phone number too short (minimum 7 digits)');
     }
-    
+
     if (digits.length > 15) {
       errors.push('Phone number too long (maximum 15 digits)');
     }
-    
+
     if (!this.phoneRegex.test(normalized) && !this.phoneRegexLoose.test(this.number)) {
       errors.push('Invalid phone number format');
     }
-    
+
     return {
       isValid: errors.length === 0,
-      errors
+      errors,
     };
   }
 
@@ -357,7 +383,7 @@ export class PhoneNumber {
       detectedCountryCode: this.detectedCountryCode,
       isLikelyMobile: this.isLikelyMobile,
       telUrl: this.telUrl,
-      smsUrl: this.smsUrl
+      smsUrl: this.smsUrl,
     };
   }
 

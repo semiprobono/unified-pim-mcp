@@ -48,11 +48,15 @@ export class SecurityManager {
     } else {
       // Generate and log new salt (should be stored securely)
       this.keyDerivationSalt = crypto.randomBytes(32);
-      this.logger.warn('Generated new key derivation salt. Store this securely:', this.keyDerivationSalt.toString('hex'));
+      this.logger.warn(
+        'Generated new key derivation salt. Store this securely:',
+        this.keyDerivationSalt.toString('hex')
+      );
     }
 
     // Set storage base path
-    this.storageBasePath = this.config.storageBasePath || process.env.SECURE_STORAGE_PATH || './secure/data';
+    this.storageBasePath =
+      this.config.storageBasePath || process.env.SECURE_STORAGE_PATH || './secure/data';
   }
 
   /**
@@ -60,17 +64,17 @@ export class SecurityManager {
    */
   async initialize(masterPassword?: string): Promise<void> {
     this.logger.info('Initializing security manager');
-    
+
     try {
       // Ensure storage directory exists
       await fs.mkdir(this.storageBasePath, { recursive: true });
-      
+
       // Derive master key from password or environment
       await this.initializeMasterKey(masterPassword);
-      
+
       // Rotate encryption keys if needed
       await this.checkKeyRotation();
-      
+
       this.isInitialized = true;
       this.logger.info('Security manager initialized successfully');
     } catch (error) {
@@ -84,7 +88,7 @@ export class SecurityManager {
    */
   private async initializeMasterKey(masterPassword?: string): Promise<void> {
     const password = masterPassword || process.env.MASTER_PASSWORD;
-    
+
     if (!password) {
       throw new Error('Master password is required for security manager initialization');
     }
@@ -118,14 +122,14 @@ export class SecurityManager {
     try {
       // Encrypt the data
       const encryptedEntry = await this.encryptData(data);
-      
+
       // Store in cache
       this.secureDataCache.set(key, data);
-      
+
       // Persist to secure storage
       const filePath = path.join(this.storageBasePath, `${this.sanitizeKey(key)}.enc`);
       await fs.writeFile(filePath, JSON.stringify(encryptedEntry), 'utf8');
-      
+
       this.logger.debug(`Secure data stored for key: ${key}`);
     } catch (error) {
       this.logger.error(`Failed to store secure data for key: ${key}`, error);
@@ -149,17 +153,17 @@ export class SecurityManager {
 
       // Load from secure storage
       const filePath = path.join(this.storageBasePath, `${this.sanitizeKey(key)}.enc`);
-      
+
       try {
         const encryptedData = await fs.readFile(filePath, 'utf8');
         const encryptedEntry: SecureDataEntry = JSON.parse(encryptedData);
-        
+
         // Decrypt the data
         const decryptedData = await this.decryptData(encryptedEntry);
-        
+
         // Update cache
         this.secureDataCache.set(key, decryptedData);
-        
+
         return decryptedData;
       } catch (error: any) {
         if (error.code === 'ENOENT') {
@@ -180,10 +184,10 @@ export class SecurityManager {
     try {
       // Remove from cache
       this.secureDataCache.delete(key);
-      
+
       // Remove from storage
       const filePath = path.join(this.storageBasePath, `${this.sanitizeKey(key)}.enc`);
-      
+
       try {
         await fs.unlink(filePath);
         this.logger.debug(`Secure data deleted for key: ${key}`);
@@ -208,21 +212,18 @@ export class SecurityManager {
 
     const iv = crypto.randomBytes(16);
     const cipher = crypto.createCipheriv(this.ENCRYPTION_ALGORITHM, this.masterKey, iv);
-    
+
     const jsonData = JSON.stringify(data);
-    const encrypted = Buffer.concat([
-      cipher.update(jsonData, 'utf8'),
-      cipher.final()
-    ]);
-    
+    const encrypted = Buffer.concat([cipher.update(jsonData, 'utf8'), cipher.final()]);
+
     const authTag = cipher.getAuthTag();
-    
+
     return {
       encryptedData: encrypted.toString('base64'),
       iv: iv.toString('base64'),
       authTag: authTag.toString('base64'),
       timestamp: Date.now(),
-      keyId: crypto.createHash('sha256').update(this.masterKey).digest('hex').substring(0, 8)
+      keyId: crypto.createHash('sha256').update(this.masterKey).digest('hex').substring(0, 8),
     };
   }
 
@@ -239,14 +240,14 @@ export class SecurityManager {
       this.masterKey,
       Buffer.from(encryptedEntry.iv, 'base64')
     );
-    
+
     decipher.setAuthTag(Buffer.from(encryptedEntry.authTag, 'base64'));
-    
+
     const decrypted = Buffer.concat([
       decipher.update(Buffer.from(encryptedEntry.encryptedData, 'base64')),
-      decipher.final()
+      decipher.final(),
     ]);
-    
+
     return JSON.parse(decrypted.toString('utf8'));
   }
 
@@ -264,11 +265,11 @@ export class SecurityManager {
     // Check key rotation metadata
     const rotationKey = 'system_key_rotation_metadata';
     const metadata = await this.getSecureData(rotationKey);
-    
+
     if (metadata) {
       const lastRotation = new Date(metadata.lastRotation);
       const daysSinceRotation = (Date.now() - lastRotation.getTime()) / (1000 * 60 * 60 * 24);
-      
+
       if (daysSinceRotation > 90) {
         this.logger.warn('Key rotation recommended (>90 days since last rotation)');
       }
@@ -276,7 +277,7 @@ export class SecurityManager {
       // Store initial rotation metadata
       await this.storeSecureData(rotationKey, {
         lastRotation: new Date().toISOString(),
-        rotationCount: 0
+        rotationCount: 0,
       });
     }
   }
@@ -319,7 +320,8 @@ export class SecurityManager {
       // Update rotation metadata
       await this.storeSecureData('system_key_rotation_metadata', {
         lastRotation: new Date().toISOString(),
-        rotationCount: (dataToReencrypt.get('system_key_rotation_metadata')?.rotationCount || 0) + 1
+        rotationCount:
+          (dataToReencrypt.get('system_key_rotation_metadata')?.rotationCount || 0) + 1,
       });
 
       // Clear cache
@@ -337,7 +339,7 @@ export class SecurityManager {
    */
   async getStatus(): Promise<any> {
     const rotationMetadata = await this.getSecureData('system_key_rotation_metadata');
-    
+
     return {
       initialized: this.isInitialized,
       encryptionEnabled: true,
@@ -346,7 +348,7 @@ export class SecurityManager {
       keyDerivationIterations: this.KEY_DERIVATION_ITERATIONS,
       lastKeyRotation: rotationMetadata?.lastRotation || 'Never',
       rotationCount: rotationMetadata?.rotationCount || 0,
-      cacheSize: this.secureDataCache.size
+      cacheSize: this.secureDataCache.size,
     };
   }
 
@@ -384,16 +386,16 @@ export class SecurityManager {
    */
   async dispose(): Promise<void> {
     this.logger.info('Disposing security manager');
-    
+
     // Clear sensitive data from memory
     if (this.masterKey) {
       this.masterKey.fill(0);
       this.masterKey = null;
     }
-    
+
     this.secureDataCache.clear();
     this.isInitialized = false;
-    
+
     this.logger.info('Security manager disposed');
   }
 }

@@ -152,7 +152,7 @@ export class FileMetadataImpl implements FileMetadata {
         canShare: true,
         canDownload: true,
         canPrint: true,
-        canCopy: true
+        canCopy: true,
       },
       source
     );
@@ -188,7 +188,7 @@ export class FileMetadataImpl implements FileMetadata {
         canShare: true,
         canDownload: true,
         canPrint: sharingScope !== 'anonymous',
-        canCopy: sharingScope !== 'anonymous'
+        canCopy: sharingScope !== 'anonymous',
       },
       'share',
       undefined, // driveId
@@ -231,7 +231,7 @@ export class FileMetadataImpl implements FileMetadata {
         canWrite: true,
         canDelete: true,
         canShare: true,
-        canDownload: true
+        canDownload: true,
       },
       'upload',
       undefined, // driveId
@@ -260,7 +260,7 @@ export class FileMetadataImpl implements FileMetadata {
         status: 'active',
         bytesUploaded: 0,
         totalBytes,
-        expirationTime
+        expirationTime,
       }
     );
   }
@@ -272,12 +272,12 @@ export class FileMetadataImpl implements FileMetadata {
     const units = ['B', 'KB', 'MB', 'GB', 'TB'];
     let size = this.size;
     let unitIndex = 0;
-    
+
     while (size >= 1024 && unitIndex < units.length - 1) {
       size /= 1024;
       unitIndex++;
     }
-    
+
     return `${size.toFixed(unitIndex > 0 ? 1 : 0)} ${units[unitIndex]}`;
   }
 
@@ -390,33 +390,45 @@ export class FileMetadataImpl implements FileMetadata {
    */
   get fileCategory(): 'document' | 'image' | 'video' | 'audio' | 'archive' | 'code' | 'other' {
     const type = this.contentType.toLowerCase();
-    
-    if (type.includes('document') || type.includes('pdf') || type.includes('word') || 
-        type.includes('excel') || type.includes('powerpoint') || type.includes('text')) {
+
+    if (
+      type.includes('document') ||
+      type.includes('pdf') ||
+      type.includes('word') ||
+      type.includes('excel') ||
+      type.includes('powerpoint') ||
+      type.includes('text')
+    ) {
       return 'document';
     }
-    
+
     if (type.startsWith('image/')) {
       return 'image';
     }
-    
+
     if (type.startsWith('video/')) {
       return 'video';
     }
-    
+
     if (type.startsWith('audio/')) {
       return 'audio';
     }
-    
+
     if (type.includes('zip') || type.includes('archive') || type.includes('compressed')) {
       return 'archive';
     }
-    
-    if (type.includes('javascript') || type.includes('typescript') || type.includes('json') ||
-        type.includes('xml') || type.includes('html') || type.includes('css')) {
+
+    if (
+      type.includes('javascript') ||
+      type.includes('typescript') ||
+      type.includes('json') ||
+      type.includes('xml') ||
+      type.includes('html') ||
+      type.includes('css')
+    ) {
       return 'code';
     }
-    
+
     return 'other';
   }
 
@@ -606,13 +618,16 @@ export class FileMetadataImpl implements FileMetadata {
   /**
    * Updates upload session progress
    */
-  withUploadProgress(bytesUploaded: number, status?: 'active' | 'completed' | 'failed' | 'cancelled'): FileMetadataImpl {
+  withUploadProgress(
+    bytesUploaded: number,
+    status?: 'active' | 'completed' | 'failed' | 'cancelled'
+  ): FileMetadataImpl {
     if (!this.uploadSession) return this;
 
     const newUploadSession = {
       ...this.uploadSession,
       bytesUploaded,
-      status: status ?? this.uploadSession.status
+      status: status ?? this.uploadSession.status,
     };
 
     return new FileMetadataImpl(
@@ -661,7 +676,7 @@ export class FileMetadataImpl implements FileMetadata {
   withCustomProperty(key: string, value: any): FileMetadataImpl {
     const newCustomProperties = {
       ...this.customProperties,
-      [key]: value
+      [key]: value,
     };
 
     return new FileMetadataImpl(
@@ -751,22 +766,26 @@ export class FileMetadataImpl implements FileMetadata {
       isVirusClean: this.isVirusClean,
       isVirusScanPending: this.isVirusScanPending,
       classification: this.classification,
-      retention: this.retention ? {
-        ...this.retention,
-        retainUntil: this.retention.retainUntil?.toISOString()
-      } : undefined,
+      retention: this.retention
+        ? {
+            ...this.retention,
+            retainUntil: this.retention.retainUntil?.toISOString(),
+          }
+        : undefined,
       isLegalHold: this.isLegalHold,
       isRetentionExpired: this.isRetentionExpired,
       source: this.source,
-      uploadSession: this.uploadSession ? {
-        ...this.uploadSession,
-        expirationTime: this.uploadSession.expirationTime.toISOString()
-      } : undefined,
+      uploadSession: this.uploadSession
+        ? {
+            ...this.uploadSession,
+            expirationTime: this.uploadSession.expirationTime.toISOString(),
+          }
+        : undefined,
       isUploading: this.isUploading,
       uploadProgress: this.uploadProgress,
       isUploadExpired: this.isUploadExpired,
       customProperties: this.customProperties,
-      extensions: this.extensions
+      extensions: this.extensions,
     };
   }
 
@@ -807,14 +826,20 @@ export class FileMetadataImpl implements FileMetadata {
       json.virusStatus,
       json.scanTime ? new Date(json.scanTime) : undefined,
       json.classification,
-      json.retention ? {
-        ...json.retention,
-        retainUntil: json.retention.retainUntil ? new Date(json.retention.retainUntil) : undefined
-      } : undefined,
-      json.uploadSession ? {
-        ...json.uploadSession,
-        expirationTime: new Date(json.uploadSession.expirationTime)
-      } : undefined,
+      json.retention
+        ? {
+            ...json.retention,
+            retainUntil: json.retention.retainUntil
+              ? new Date(json.retention.retainUntil)
+              : undefined,
+          }
+        : undefined,
+      json.uploadSession
+        ? {
+            ...json.uploadSession,
+            expirationTime: new Date(json.uploadSession.expirationTime),
+          }
+        : undefined,
       json.customProperties,
       json.extensions
     );

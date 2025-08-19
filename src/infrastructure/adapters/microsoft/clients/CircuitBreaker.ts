@@ -4,20 +4,20 @@ import { Logger } from '../../../../shared/logging/Logger.js';
  * Circuit breaker states
  */
 export enum CircuitState {
-  CLOSED = 'CLOSED',     // Normal operation
-  OPEN = 'OPEN',         // Failing, reject requests
-  HALF_OPEN = 'HALF_OPEN' // Testing if service recovered
+  CLOSED = 'CLOSED', // Normal operation
+  OPEN = 'OPEN', // Failing, reject requests
+  HALF_OPEN = 'HALF_OPEN', // Testing if service recovered
 }
 
 /**
  * Circuit breaker configuration
  */
 export interface CircuitBreakerConfig {
-  failureThreshold: number;     // Number of failures before opening
-  successThreshold: number;      // Number of successes to close from half-open
-  timeout: number;              // Time to wait before half-open (ms)
-  resetTimeout: number;         // Time to reset failure count (ms)
-  volumeThreshold?: number;     // Minimum requests before opening
+  failureThreshold: number; // Number of failures before opening
+  successThreshold: number; // Number of successes to close from half-open
+  timeout: number; // Time to wait before half-open (ms)
+  resetTimeout: number; // Time to reset failure count (ms)
+  volumeThreshold?: number; // Minimum requests before opening
   errorThresholdPercentage?: number; // Error percentage threshold
 }
 
@@ -68,16 +68,16 @@ export class CircuitBreaker {
       if (this.shouldAttemptReset()) {
         this.transitionToHalfOpen();
       } else {
-        const waitTime = this.nextAttemptTime ? 
-          Math.max(0, this.nextAttemptTime.getTime() - Date.now()) : 
-          this.config.timeout;
-        
+        const waitTime = this.nextAttemptTime
+          ? Math.max(0, this.nextAttemptTime.getTime() - Date.now())
+          : this.config.timeout;
+
         this.logger.warn(`Circuit breaker is OPEN. Next attempt in ${waitTime}ms`);
-        
+
         if (fallback) {
           return fallback();
         }
-        
+
         throw new Error(`Circuit breaker is OPEN. Service unavailable. Retry in ${waitTime}ms`);
       }
     }
@@ -85,20 +85,20 @@ export class CircuitBreaker {
     try {
       // Execute the function
       const result = await fn();
-      
+
       // Record success
       this.onSuccess();
-      
+
       return result;
     } catch (error) {
       // Record failure
       this.onFailure(error);
-      
+
       // If we have a fallback, use it
       if (fallback && this.state === CircuitState.OPEN) {
         return fallback();
       }
-      
+
       throw error;
     }
   }
@@ -118,7 +118,7 @@ export class CircuitBreaker {
           this.transitionToClosed();
         }
         break;
-      
+
       case CircuitState.CLOSED:
         // Reset failure count on success in closed state
         if (this.failures > 0) {
@@ -127,7 +127,9 @@ export class CircuitBreaker {
         break;
     }
 
-    this.logger.debug(`Circuit breaker success. State: ${this.state}, Successes: ${this.successes}`);
+    this.logger.debug(
+      `Circuit breaker success. State: ${this.state}, Successes: ${this.successes}`
+    );
   }
 
   /**
@@ -140,7 +142,10 @@ export class CircuitBreaker {
     this.updateRequestWindow(false);
 
     // Log the failure
-    this.logger.warn(`Circuit breaker failure. State: ${this.state}, Failures: ${this.failures}`, error);
+    this.logger.warn(
+      `Circuit breaker failure. State: ${this.state}, Failures: ${this.failures}`,
+      error
+    );
 
     switch (this.state) {
       case CircuitState.CLOSED:
@@ -148,7 +153,7 @@ export class CircuitBreaker {
           this.transitionToOpen();
         }
         break;
-      
+
       case CircuitState.HALF_OPEN:
         // Any failure in half-open state reopens the circuit
         this.transitionToOpen();
@@ -188,7 +193,7 @@ export class CircuitBreaker {
     if (!this.nextAttemptTime) {
       return true;
     }
-    
+
     return Date.now() >= this.nextAttemptTime.getTime();
   }
 
@@ -198,9 +203,11 @@ export class CircuitBreaker {
   private transitionToOpen(): void {
     this.state = CircuitState.OPEN;
     this.nextAttemptTime = new Date(Date.now() + this.config.timeout);
-    
-    this.logger.error(`Circuit breaker OPENED. Will attempt reset at ${this.nextAttemptTime.toISOString()}`);
-    
+
+    this.logger.error(
+      `Circuit breaker OPENED. Will attempt reset at ${this.nextAttemptTime.toISOString()}`
+    );
+
     // Reset counters
     this.successes = 0;
   }
@@ -212,7 +219,7 @@ export class CircuitBreaker {
     this.state = CircuitState.HALF_OPEN;
     this.successes = 0;
     this.failures = 0;
-    
+
     this.logger.info('Circuit breaker transitioned to HALF_OPEN. Testing service recovery...');
   }
 
@@ -224,7 +231,7 @@ export class CircuitBreaker {
     this.failures = 0;
     this.successes = 0;
     this.nextAttemptTime = undefined;
-    
+
     this.logger.info('Circuit breaker CLOSED. Service recovered.');
   }
 
@@ -233,14 +240,14 @@ export class CircuitBreaker {
    */
   private updateRequestWindow(success: boolean): void {
     const now = Date.now();
-    
+
     // Add current request
     this.requestWindow.push(success ? 0 : 1);
-    
+
     // Remove old requests outside the window
     const windowSize = this.config.resetTimeout;
     while (this.requestWindow.length > 0) {
-      const oldestTime = now - (this.requestWindow.length * 100); // Approximate timing
+      const oldestTime = now - this.requestWindow.length * 100; // Approximate timing
       if (oldestTime > windowSize) {
         this.requestWindow.shift();
       } else {
@@ -256,7 +263,7 @@ export class CircuitBreaker {
     if (this.requestWindow.length === 0) {
       return 0;
     }
-    
+
     const errors = this.requestWindow.reduce((sum, val) => sum + val, 0);
     return (errors / this.requestWindow.length) * 100;
   }
@@ -267,10 +274,10 @@ export class CircuitBreaker {
   private startResetTimer(): void {
     this.resetTimer = setInterval(() => {
       if (this.state === CircuitState.CLOSED && this.failures > 0) {
-        const timeSinceLastFailure = this.lastFailureTime ? 
-          Date.now() - this.lastFailureTime.getTime() : 
-          Infinity;
-        
+        const timeSinceLastFailure = this.lastFailureTime
+          ? Date.now() - this.lastFailureTime.getTime()
+          : Infinity;
+
         if (timeSinceLastFailure >= this.config.resetTimeout) {
           this.failures = 0;
           this.logger.debug('Circuit breaker failure count reset due to timeout');
@@ -321,7 +328,7 @@ export class CircuitBreaker {
     this.lastSuccessTime = undefined;
     this.nextAttemptTime = undefined;
     this.requestWindow.length = 0;
-    
+
     this.logger.info('Circuit breaker reset');
   }
 

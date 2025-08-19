@@ -19,22 +19,22 @@ if (!isRealIntegration) {
       createCollection: jest.fn(),
       getCollection: jest.fn(),
       deleteCollection: jest.fn(),
-      heartbeat: jest.fn()
+      heartbeat: jest.fn(),
     })),
-    OpenAIEmbeddingFunction: jest.fn()
+    OpenAIEmbeddingFunction: jest.fn(),
   }));
-  
+
   // Mock MSAL Node
   jest.mock('@azure/msal-node', () => ({
     ConfidentialClientApplication: jest.fn(() => ({
       getAuthCodeUrl: jest.fn(),
       acquireTokenByCode: jest.fn(),
-      acquireTokenSilent: jest.fn()
+      acquireTokenSilent: jest.fn(),
     })),
     AuthenticationResult: jest.fn(),
-    TokenCacheContext: jest.fn()
+    TokenCacheContext: jest.fn(),
   }));
-  
+
   // Mock node-fetch for HTTP requests
   jest.mock('node-fetch', () => jest.fn());
 }
@@ -53,10 +53,11 @@ declare global {
 // Custom matchers
 expect.extend({
   toHaveValidAuthResponse(received: any) {
-    const pass = received && 
-                 typeof received.success === 'boolean' &&
-                 (received.success === false || received.authUrl);
-    
+    const pass =
+      received &&
+      typeof received.success === 'boolean' &&
+      (received.success === false || received.authUrl);
+
     if (pass) {
       return {
         message: () => `Expected ${received} not to be a valid auth response`,
@@ -64,17 +65,19 @@ expect.extend({
       };
     } else {
       return {
-        message: () => `Expected ${received} to be a valid auth response with success boolean and authUrl if successful`,
+        message: () =>
+          `Expected ${received} to be a valid auth response with success boolean and authUrl if successful`,
         pass: false,
       };
     }
   },
-  
+
   toHaveValidEmailResponse(received: any) {
-    const pass = received && 
-                 typeof received.success === 'boolean' &&
-                 (received.success === false || received.data);
-    
+    const pass =
+      received &&
+      typeof received.success === 'boolean' &&
+      (received.success === false || received.data);
+
     if (pass) {
       return {
         message: () => `Expected ${received} not to be a valid email response`,
@@ -82,18 +85,20 @@ expect.extend({
       };
     } else {
       return {
-        message: () => `Expected ${received} to be a valid email response with success boolean and data if successful`,
+        message: () =>
+          `Expected ${received} to be a valid email response with success boolean and data if successful`,
         pass: false,
       };
     }
   },
-  
+
   toHaveValidMCPResponse(received: any) {
-    const pass = received && 
-                 received.content &&
-                 Array.isArray(received.content) &&
-                 received.content.length > 0;
-    
+    const pass =
+      received &&
+      received.content &&
+      Array.isArray(received.content) &&
+      received.content.length > 0;
+
     if (pass) {
       return {
         message: () => `Expected ${received} not to be a valid MCP response`,
@@ -105,7 +110,7 @@ expect.extend({
         pass: false,
       };
     }
-  }
+  },
 });
 
 // Global test hooks
@@ -118,7 +123,7 @@ beforeAll(async () => {
 afterAll(async () => {
   // Global cleanup
   console.log('🏁 Integration Test Suite Complete');
-  
+
   // Force garbage collection
   if (global.gc) {
     global.gc();
@@ -134,6 +139,6 @@ export const testConfig = {
   mockData: {
     userId: 'test-user-123',
     clientId: 'test-client-id',
-    tenantId: 'test-tenant-id'
-  }
+    tenantId: 'test-tenant-id',
+  },
 };

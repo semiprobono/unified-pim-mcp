@@ -1,4 +1,4 @@
-import { describe, it, expect } from '@jest/globals';
+import { describe, expect, it } from '@jest/globals';
 import { EmailAddress } from '../../../../src/domain/value-objects/EmailAddress';
 
 describe('EmailAddress', () => {
@@ -57,7 +57,7 @@ describe('EmailAddress', () => {
     it('should detect provider', () => {
       const gmailEmail = new EmailAddress('user@gmail.com');
       expect(gmailEmail.provider).toBe('Gmail');
-      
+
       const outlookEmail = new EmailAddress('user@outlook.com');
       expect(outlookEmail.provider).toBe('Outlook');
     });
@@ -66,7 +66,7 @@ describe('EmailAddress', () => {
       const gmailEmail = new EmailAddress('user@gmail.com');
       expect(gmailEmail.isGoogle).toBe(true);
       expect(gmailEmail.isMicrosoft).toBe(false);
-      
+
       const outlookEmail = new EmailAddress('user@outlook.com');
       expect(outlookEmail.isMicrosoft).toBe(true);
       expect(outlookEmail.isGoogle).toBe(false);
@@ -78,7 +78,7 @@ describe('EmailAddress', () => {
       const email1 = new EmailAddress('test@example.com');
       const email2 = new EmailAddress('test@example.com');
       const email3 = new EmailAddress('other@example.com');
-      
+
       expect(email1.equals(email2)).toBe(true);
       expect(email1.equals(email3)).toBe(false);
     });
@@ -86,7 +86,7 @@ describe('EmailAddress', () => {
     it('should create display string', () => {
       const emailWithName = new EmailAddress('test@example.com', 'Test User');
       expect(emailWithName.displayString).toBe('Test User <test@example.com>');
-      
+
       const emailWithoutName = new EmailAddress('test@example.com');
       expect(emailWithoutName.displayString).toBe('test@example.com');
     });
@@ -94,7 +94,7 @@ describe('EmailAddress', () => {
     it('should generate initials', () => {
       const emailWithName = new EmailAddress('test@example.com', 'John Doe');
       expect(emailWithName.initials).toBe('JD');
-      
+
       const emailWithoutName = new EmailAddress('john.doe@example.com');
       expect(emailWithoutName.initials).toBe('JD');
     });
@@ -109,7 +109,7 @@ describe('EmailAddress', () => {
     it('should serialize to JSON', () => {
       const email = new EmailAddress('test@example.com', 'Test User', 'work', true);
       const json = email.toJSON();
-      
+
       expect(json['address']).toBe('test@example.com');
       expect(json['displayName']).toBe('Test User');
       expect(json['type']).toBe('work');

@@ -21,7 +21,7 @@ export interface TaskReminder {
   reminderDateTime: Date;
   method: 'email' | 'popup' | 'sms';
   isRelative: boolean;
-  offsetMinutes?: number  | undefined; // For relative reminders
+  offsetMinutes?: number | undefined; // For relative reminders
 }
 
 export interface Task {
@@ -31,7 +31,7 @@ export interface Task {
   readonly description?: string | undefined;
   readonly status: 'notStarted' | 'inProgress' | 'completed' | 'waitingOnOthers' | 'deferred';
   readonly importance: 'low' | 'normal' | 'high';
-  readonly priority: number  | undefined; // 1-10 scale
+  readonly priority: number | undefined; // 1-10 scale
   readonly dueDateTime?: Date | undefined;
   readonly startDateTime?: Date | undefined;
   readonly completedDateTime?: Date | undefined;
@@ -55,7 +55,12 @@ export class TaskEntity implements Task {
     public readonly id: UnifiedId,
     public readonly platformIds: Map<Platform, string>,
     public readonly title: string,
-    public readonly status: 'notStarted' | 'inProgress' | 'completed' | 'waitingOnOthers' | 'deferred',
+    public readonly status:
+      | 'notStarted'
+      | 'inProgress'
+      | 'completed'
+      | 'waitingOnOthers'
+      | 'deferred',
     public readonly importance: 'low' | 'normal' | 'high',
     public readonly priority: number,
     public readonly categories: string[],
@@ -80,7 +85,7 @@ export class TaskEntity implements Task {
     if (priority < 1 || priority > 10) {
       throw new Error('Priority must be between 1 and 10');
     }
-    
+
     // Validate percent complete
     if (percentComplete < 0 || percentComplete > 100) {
       throw new Error('Percent complete must be between 0 and 100');
@@ -111,7 +116,7 @@ export class TaskEntity implements Task {
     if (!this.dueDateTime) {
       return null;
     }
-    
+
     const now = new Date();
     const diffTime = this.dueDateTime.getTime() - now.getTime();
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -197,11 +202,13 @@ export class TaskEntity implements Task {
   /**
    * Updates the task status
    */
-  updateStatus(newStatus: 'notStarted' | 'inProgress' | 'completed' | 'waitingOnOthers' | 'deferred'): TaskEntity | undefined {
+  updateStatus(
+    newStatus: 'notStarted' | 'inProgress' | 'completed' | 'waitingOnOthers' | 'deferred'
+  ): TaskEntity | undefined {
     const completedDateTime = newStatus === 'completed' ? new Date() : undefined;
-    
-    const percentComplete = newStatus === 'completed' ? 100 : 
-                           (newStatus === 'notStarted' ? 0 : this.percentComplete);
+
+    const percentComplete =
+      newStatus === 'completed' ? 100 : newStatus === 'notStarted' ? 0 : this.percentComplete;
 
     return new TaskEntity(
       this.id,
@@ -238,11 +245,15 @@ export class TaskEntity implements Task {
       throw new Error('Percent complete must be between 0 and 100');
     }
 
-    const newStatus = percentComplete === 100 ? 'completed' : 
-                     (percentComplete > 0 ? 'inProgress' : this.status);
-    
-    const completedDateTime = percentComplete === 100 ? new Date() : 
-                            (percentComplete < 100 ? undefined : this.completedDateTime);
+    const newStatus =
+      percentComplete === 100 ? 'completed' : percentComplete > 0 ? 'inProgress' : this.status;
+
+    const completedDateTime =
+      percentComplete === 100
+        ? new Date()
+        : percentComplete < 100
+          ? undefined
+          : this.completedDateTime;
 
     return new TaskEntity(
       this.id,
@@ -279,11 +290,11 @@ export class TaskEntity implements Task {
       id: `subtask_${Date.now()}`,
       title,
       isCompleted: false,
-      createdDateTime: new Date()
+      createdDateTime: new Date(),
     };
 
     const updatedSubtasks = [...this.subtasks, newSubtask];
-    
+
     return new TaskEntity(
       this.id,
       this.platformIds,
@@ -316,7 +327,7 @@ export class TaskEntity implements Task {
    */
   completeSubtask(subtaskId: string): TaskEntity | undefined {
     const updatedSubtasks = this.subtasks.map(subtask =>
-      subtask.id === subtaskId 
+      subtask.id === subtaskId
         ? { ...subtask, isCompleted: true, completedDateTime: new Date() }
         : subtask
     );
@@ -353,7 +364,7 @@ export class TaskEntity implements Task {
    */
   addTags(newTags: string[]): TaskEntity | undefined {
     const updatedTags = [...new Set([...this.tags, ...newTags])];
-    
+
     return new TaskEntity(
       this.id,
       this.platformIds,
@@ -417,7 +428,7 @@ export class TaskEntity implements Task {
    */
   addReminder(reminder: TaskReminder): TaskEntity | undefined {
     const updatedReminders = [...this.reminders, reminder];
-    
+
     return new TaskEntity(
       this.id,
       this.platformIds,
@@ -465,7 +476,7 @@ export class TaskEntity implements Task {
       subtasks: this.subtasks,
       reminders: this.reminders.map(r => ({
         ...r,
-        reminderDateTime: r.reminderDateTime.toISOString()
+        reminderDateTime: r.reminderDateTime.toISOString(),
       })),
       taskListId: this.taskListId,
       parentTaskId: this.parentTaskId,
@@ -482,7 +493,7 @@ export class TaskEntity implements Task {
       isParentTask: this.isParentTask,
       isSubtask: this.isSubtask,
       activeReminders: this.activeReminders.length,
-      metadata: this.metadata
+      metadata: this.metadata,
     };
   }
 }

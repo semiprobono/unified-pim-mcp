@@ -16,11 +16,11 @@ export class ResilienceManager {
    */
   async initialize(): Promise<void> {
     this.logger.info('Initializing resilience manager');
-    
+
     // Initialize resilience patterns
     // This is a stub implementation
     this.isInitialized = true;
-    
+
     this.logger.info('Resilience manager initialized');
   }
 

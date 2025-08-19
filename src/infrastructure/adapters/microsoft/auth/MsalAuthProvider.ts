@@ -1,13 +1,13 @@
 import {
-  ConfidentialClientApplication,
-  PublicClientApplication,
-  AuthorizationCodeRequest,
-  AuthorizationUrlRequest,
-  RefreshTokenRequest,
-  SilentFlowRequest,
   AccountInfo,
   AuthenticationResult,
+  AuthorizationCodeRequest,
+  AuthorizationUrlRequest,
+  ConfidentialClientApplication,
   InteractionRequiredAuthError,
+  PublicClientApplication,
+  RefreshTokenRequest,
+  SilentFlowRequest,
 } from '@azure/msal-node';
 import { Logger } from '../../../../shared/logging/Logger';
 import { MsalConfig } from './MsalConfig';
@@ -41,7 +41,7 @@ export class MsalAuthProvider {
     private readonly isConfidentialClient: boolean = true
   ) {
     this.logger = logger;
-    
+
     // Initialize MSAL client based on type
     if (this.isConfidentialClient) {
       this.msalClient = new ConfidentialClientApplication(config.getConfiguration());
@@ -56,12 +56,9 @@ export class MsalAuthProvider {
   private generatePKCE(): { verifier: string; challenge: string } {
     // Generate code verifier (43-128 characters)
     const verifier = crypto.randomBytes(32).toString('base64url');
-    
+
     // Generate code challenge from verifier
-    const challenge = crypto
-      .createHash('sha256')
-      .update(verifier)
-      .digest('base64url');
+    const challenge = crypto.createHash('sha256').update(verifier).digest('base64url');
 
     this.pkceVerifier = verifier;
     this.pkceChallenge = challenge;
@@ -91,7 +88,7 @@ export class MsalAuthProvider {
 
       const authUrl = await this.msalClient.getAuthCodeUrl(authUrlRequest);
       this.logger.info('Generated authorization URL with PKCE');
-      
+
       return authUrl;
     } catch (error) {
       this.logger.error('Failed to generate authorization URL', error);
@@ -119,7 +116,7 @@ export class MsalAuthProvider {
       };
 
       const response = await this.msalClient.acquireTokenByCode(tokenRequest);
-      
+
       // Store the account for future silent requests
       if (response.account) {
         this.currentAccount = response.account;
@@ -147,7 +144,7 @@ export class MsalAuthProvider {
   ): Promise<TokenCacheEntry> {
     try {
       const targetAccount = account || this.currentAccount;
-      
+
       if (!targetAccount) {
         throw new Error('No account found. User must authenticate first.');
       }
@@ -159,16 +156,16 @@ export class MsalAuthProvider {
       };
 
       const response = await this.msalClient.acquireTokenSilent(silentRequest);
-      
+
       this.logger.info('Successfully acquired token silently');
-      
+
       return this.formatTokenResponse(response);
     } catch (error) {
       if (error instanceof InteractionRequiredAuthError) {
         this.logger.warn('Silent token acquisition failed, interaction required');
         throw new Error('User interaction required. Please re-authenticate.');
       }
-      
+
       this.logger.error('Failed to acquire token silently', error);
       throw error;
     }
@@ -188,14 +185,18 @@ export class MsalAuthProvider {
       };
 
       const response = await this.msalClient.acquireTokenByRefreshToken(refreshTokenRequest);
-      
+
       // Update current account if provided
-      if (response.account) {
+      if (response?.account) {
         this.currentAccount = response.account;
       }
 
       this.logger.info('Successfully refreshed access token');
-      
+
+      if (!response) {
+        throw new Error('Failed to refresh token - no response received');
+      }
+
       return this.formatTokenResponse(response);
     } catch (error) {
       this.logger.error('Failed to refresh access token', error);
@@ -240,7 +241,7 @@ export class MsalAuthProvider {
     const now = new Date();
     const bufferMs = bufferMinutes * 60 * 1000;
     const expirationWithBuffer = new Date(expiresOn.getTime() - bufferMs);
-    
+
     return now >= expirationWithBuffer;
   }
 
@@ -250,12 +251,12 @@ export class MsalAuthProvider {
   async signOut(account?: AccountInfo): Promise<void> {
     try {
       const targetAccount = account || this.currentAccount;
-      
+
       if (targetAccount) {
         // Clear account from MSAL cache
         const accounts = await this.msalClient.getTokenCache().getAllAccounts();
         const msalAccount = accounts.find(acc => acc.homeAccountId === targetAccount.homeAccountId);
-        
+
         if (msalAccount) {
           await this.msalClient.getTokenCache().removeAccount(msalAccount);
         }
@@ -264,7 +265,7 @@ export class MsalAuthProvider {
       this.currentAccount = null;
       this.pkceVerifier = null;
       this.pkceChallenge = null;
-      
+
       this.logger.info('User signed out successfully');
     } catch (error) {
       this.logger.error('Failed to sign out user', error);
@@ -319,10 +320,8 @@ export class MsalAuthProvider {
    * Validate token scopes
    */
   hasRequiredScopes(tokenScopes: string[], requiredScopes: string[]): boolean {
-    return requiredScopes.every(scope => 
-      tokenScopes.some(tokenScope => 
-        tokenScope.toLowerCase() === scope.toLowerCase()
-      )
+    return requiredScopes.every(scope =>
+      tokenScopes.some(tokenScope => tokenScope.toLowerCase() === scope.toLowerCase())
     );
   }
 
@@ -332,11 +331,11 @@ export class MsalAuthProvider {
   getLogoutUrl(postLogoutRedirectUri?: string): string {
     const config = this.config.getConfiguration();
     const logoutUrl = new URL(`${config.auth.authority}/oauth2/v2.0/logout`);
-    
+
     if (postLogoutRedirectUri) {
       logoutUrl.searchParams.append('post_logout_redirect_uri', postLogoutRedirectUri);
     }
-    
+
     return logoutUrl.toString();
   }
 }

@@ -1,10 +1,10 @@
 import { describe, test, expect, beforeAll, afterAll, beforeEach, afterEach } from '@jest/globals';
 import { performance } from 'perf_hooks';
 import { EventEmitter } from 'events';
-import { UnifiedPIMMain } from '../../src/index.js';
-import { GraphApiMockStrategy, ChromaDbMockStrategy } from '../mocks/advancedMockStrategies.js';
-import { EmailDataGenerator } from '../fixtures/testDataGenerator.js';
-import { testConfig } from './setup.integration.js';
+import { UnifiedPIMMain } from '../../src/index';
+import { GraphApiMockStrategy, ChromaDbMockStrategy } from '../mocks/advancedMockStrategies';
+import { EmailDataGenerator } from '../fixtures/testDataGenerator';
+import { testConfig } from './setup.integration';
 
 /**
  * Performance and Load Testing for Integration Scenarios
@@ -588,7 +588,7 @@ describe('Performance and Load Testing', () => {
             mockServer.callTool('pim_email_search', {
               query: `stress test ${level}-${i}`,
               platform: 'microsoft'
-            }).catch(error => ({ error: error.message }))
+            }).catch((error: any) => ({ error: error.message }))
           );
 
           await Promise.allSettled(stressOperations);
@@ -670,7 +670,7 @@ describe('Performance and Load Testing', () => {
           mockServer.callTool('pim_email_search', {
             query: `overload ${i}`,
             platform: 'microsoft'
-          }).catch(error => ({ error: error.message }))
+          }).catch((error: any) => ({ error: error.message }))
         );
 
         await Promise.allSettled(overloadOps);
@@ -827,7 +827,7 @@ describe('Performance and Load Testing', () => {
         clearInterval(monitoringInterval);
 
         // Analyze memory trend
-        const isMemoryIncreasing = this.analyzeMemoryTrend(memorySnapshots);
+        const isMemoryIncreasing = analyzeMemoryTrend(memorySnapshots);
         const memoryRange = Math.max(...memorySnapshots) - Math.min(...memorySnapshots);
 
         console.log('🔍 Memory Leak Analysis:');
@@ -848,8 +848,8 @@ describe('Performance and Load Testing', () => {
     }, 120000);
   });
 
-  // Helper method to analyze memory trend
-  private analyzeMemoryTrend(snapshots: number[]): boolean {
+  // Helper function to analyze memory trend
+  function analyzeMemoryTrend(snapshots: number[]): boolean {
     if (snapshots.length < 5) return false;
 
     // Check if memory consistently increases over time

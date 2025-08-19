@@ -12,7 +12,14 @@ export interface EventMetadata {
   readonly recurringEventId?: string | undefined;
   readonly originalStartTime?: Date | undefined;
   readonly isOnlineMeeting: boolean;
-  readonly onlineMeetingProvider?: 'teamsForBusiness' | 'skypeForBusiness' | 'skypeForConsumer' | 'zoom' | 'webex' | 'other' | undefined;
+  readonly onlineMeetingProvider?:
+    | 'teamsForBusiness'
+    | 'skypeForBusiness'
+    | 'skypeForConsumer'
+    | 'zoom'
+    | 'webex'
+    | 'other'
+    | undefined;
   readonly onlineMeetingUrl?: string | undefined;
   readonly joinInformation?: {
     conferenceId?: string;
@@ -55,7 +62,13 @@ export class EventMetadataImpl implements EventMetadata {
     public readonly etag?: string,
     public readonly recurringEventId?: string,
     public readonly originalStartTime?: Date,
-    public readonly onlineMeetingProvider?: 'teamsForBusiness' | 'skypeForBusiness' | 'skypeForConsumer' | 'zoom' | 'webex' | 'other',
+    public readonly onlineMeetingProvider?:
+      | 'teamsForBusiness'
+      | 'skypeForBusiness'
+      | 'skypeForConsumer'
+      | 'zoom'
+      | 'webex'
+      | 'other',
     public readonly onlineMeetingUrl?: string,
     public readonly joinInformation?: {
       conferenceId?: string;
@@ -76,11 +89,7 @@ export class EventMetadataImpl implements EventMetadata {
   /**
    * Creates minimal metadata for a new event
    */
-  static createMinimal(
-    platform: Platform,
-    calendarId: string,
-    eventId: string
-  ): EventMetadataImpl {
+  static createMinimal(platform: Platform, calendarId: string, eventId: string): EventMetadataImpl {
     return new EventMetadataImpl(
       platform,
       calendarId,
@@ -88,9 +97,9 @@ export class EventMetadataImpl implements EventMetadata {
       0, // sequence
       false, // isOnlineMeeting
       false, // isPrivate
-      true,  // allowNewTimeProposals
+      true, // allowNewTimeProposals
       false, // hideAttendees
-      true,  // responseRequested
+      true, // responseRequested
       false, // disallowNewTimeProposals
       new Date() // lastSyncTime
     );
@@ -103,7 +112,13 @@ export class EventMetadataImpl implements EventMetadata {
     platform: Platform,
     calendarId: string,
     eventId: string,
-    provider: 'teamsForBusiness' | 'skypeForBusiness' | 'skypeForConsumer' | 'zoom' | 'webex' | 'other',
+    provider:
+      | 'teamsForBusiness'
+      | 'skypeForBusiness'
+      | 'skypeForConsumer'
+      | 'zoom'
+      | 'webex'
+      | 'other',
     meetingUrl: string
   ): EventMetadataImpl {
     return new EventMetadataImpl(
@@ -113,9 +128,9 @@ export class EventMetadataImpl implements EventMetadata {
       0, // sequence
       true, // isOnlineMeeting
       false, // isPrivate
-      true,  // allowNewTimeProposals
+      true, // allowNewTimeProposals
       false, // hideAttendees
-      true,  // responseRequested
+      true, // responseRequested
       false, // disallowNewTimeProposals
       new Date(), // lastSyncTime
       undefined, // calendarName
@@ -147,9 +162,9 @@ export class EventMetadataImpl implements EventMetadata {
       sequence,
       false, // isOnlineMeeting
       false, // isPrivate
-      true,  // allowNewTimeProposals
+      true, // allowNewTimeProposals
       false, // hideAttendees
-      true,  // responseRequested
+      true, // responseRequested
       false, // disallowNewTimeProposals
       new Date(), // lastSyncTime
       undefined, // calendarName
@@ -200,7 +215,7 @@ export class EventMetadataImpl implements EventMetadata {
    * Gets the meeting provider display name
    */
   get meetingProviderName(): string {
-    if (!this.onlineMeetingProvider) return undefined;
+    if (!this.onlineMeetingProvider) return 'No Online Meeting';
 
     const providerNames = {
       teamsForBusiness: 'Microsoft Teams',
@@ -208,7 +223,7 @@ export class EventMetadataImpl implements EventMetadata {
       skypeForConsumer: 'Skype',
       zoom: 'Zoom',
       webex: 'Webex',
-      other: 'Online Meeting'
+      other: 'Online Meeting',
     };
 
     return providerNames[this.onlineMeetingProvider];
@@ -285,7 +300,13 @@ export class EventMetadataImpl implements EventMetadata {
    * Updates online meeting information
    */
   withOnlineMeeting(
-    provider: 'teamsForBusiness' | 'skypeForBusiness' | 'skypeForConsumer' | 'zoom' | 'webex' | 'other',
+    provider:
+      | 'teamsForBusiness'
+      | 'skypeForBusiness'
+      | 'skypeForConsumer'
+      | 'zoom'
+      | 'webex'
+      | 'other',
     url: string,
     joinInfo?: {
       conferenceId?: string;
@@ -388,7 +409,7 @@ export class EventMetadataImpl implements EventMetadata {
   withCustomProperty(key: string, value: any): EventMetadataImpl {
     const newCustomProperties = {
       ...this.customProperties,
-      [key]: value
+      [key]: value,
     };
 
     return new EventMetadataImpl(
@@ -421,10 +442,7 @@ export class EventMetadataImpl implements EventMetadata {
    * Adds extension
    */
   withExtension(extensionName: string, id: string, data: Record<string, any>): EventMetadataImpl {
-    const newExtensions = [
-      ...(this.extensions || []),
-      { extensionName, id, data }
-    ];
+    const newExtensions = [...(this.extensions || []), { extensionName, id, data }];
 
     return new EventMetadataImpl(
       this.platform,
@@ -456,9 +474,7 @@ export class EventMetadataImpl implements EventMetadata {
    * Gets specific extension data
    */
   getExtension(extensionName: string, id: string): Record<string, any> | undefined {
-    return this.extensions?.find(
-      ext => ext.extensionName === extensionName && ext.id === id
-    )?.data;
+    return this.extensions?.find(ext => ext.extensionName === extensionName && ext.id === id)?.data;
   }
 
   /**
@@ -494,7 +510,7 @@ export class EventMetadataImpl implements EventMetadata {
       timeSinceSync: this.timeSinceSync,
       isSyncStale: this.isSyncStale,
       customProperties: this.customProperties,
-      extensions: this.extensions
+      extensions: this.extensions,
     };
   }
 

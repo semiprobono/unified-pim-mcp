@@ -66,7 +66,7 @@ export class MockChromaCollection {
     embeddings?: number[][];
   }> {
     let ids: string[] = [];
-    
+
     if (params?.ids) {
       ids = params.ids.filter(id => this.documents.has(id) || this.metadata.has(id));
     } else {
@@ -134,10 +134,7 @@ export class MockChromaCollection {
     return result;
   }
 
-  async delete(params?: {
-    ids?: string[];
-    where?: any;
-  }): Promise<void> {
+  async delete(params?: { ids?: string[]; where?: any }): Promise<void> {
     if (params?.ids) {
       params.ids.forEach(id => {
         this.documents.delete(id);
@@ -325,9 +322,12 @@ export const chromaDbTestHelpers = {
     mockChromaClient.setShouldFail(true, error);
   },
 
-  createMockCollection: async (name: string, documents: Array<{ id: string; content: string; metadata?: any }> = []) => {
+  createMockCollection: async (
+    name: string,
+    documents: Array<{ id: string; content: string; metadata?: any }> = []
+  ) => {
     const collection = await mockChromaClient.createCollection({ name });
-    
+
     if (documents.length > 0) {
       await collection.add({
         ids: documents.map(d => d.id),
@@ -339,7 +339,10 @@ export const chromaDbTestHelpers = {
     return collection;
   },
 
-  addDocumentsToCollection: async (collection: MockChromaCollection, documents: Array<{ id: string; content: string; metadata?: any }>) => {
+  addDocumentsToCollection: async (
+    collection: MockChromaCollection,
+    documents: Array<{ id: string; content: string; metadata?: any }>
+  ) => {
     await collection.add({
       ids: documents.map(d => d.id),
       documents: documents.map(d => d.content),
@@ -357,10 +360,12 @@ export const chromaDbTestHelpers = {
 
   getStats: () => ({
     totalCollections: mockChromaClient.getCollectionCount(),
-    collections: Array.from((mockChromaClient as any).collections.entries()).map(([name, collection]: [string, MockChromaCollection]) => ({
-      name,
-      size: collection.getSize(),
-    })),
+    collections: Array.from((mockChromaClient as any).collections.entries()).map(
+      ([name, collection]: [string, MockChromaCollection]) => ({
+        name,
+        size: collection.getSize(),
+      })
+    ),
   }),
 };
 

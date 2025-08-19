@@ -1,0 +1,22 @@
+{
+  "appId": "REPLACE_WITH_YOUR_CLIENT_ID",
+  "tenantId": "REPLACE_WITH_YOUR_TENANT_ID",
+  "environment": "Development",
+  "redirectUri": "http://localhost:8080/auth/callback",
+  "authority": "https://login.microsoftonline.com/REPLACE_WITH_YOUR_TENANT_ID",
+  "scopes": [
+    "User.Read",
+    "Mail.Read",
+    "Mail.ReadWrite",
+    "Mail.Send",
+    "Calendars.Read",
+    "Calendars.ReadWrite",
+    "Contacts.Read",
+    "Contacts.ReadWrite",
+    "Tasks.Read",
+    "Tasks.ReadWrite",
+    "Files.Read.All",
+    "Files.ReadWrite.All"
+  ],
+  "created": "2025-08-18T21:55:00.000Z"
+}

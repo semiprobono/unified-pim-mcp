@@ -74,7 +74,7 @@ export class PersonName {
   } {
     const trimmed = displayName.trim();
     const parts = trimmed.split(/\s+/);
-    
+
     if (parts.length === 0) {
       return {};
     }
@@ -146,11 +146,11 @@ export class PersonName {
     }
 
     const parts: string[] = [];
-    
+
     if (this.givenName) parts.push(this.givenName);
     if (this.middleName) parts.push(this.middleName);
     if (this.surname) parts.push(this.surname);
-    
+
     return parts.join(' ') || this.nickname || '';
   }
 
@@ -159,11 +159,11 @@ export class PersonName {
    */
   get formalName(): string {
     const parts: string[] = [];
-    
+
     if (this.title) parts.push(this.title);
     parts.push(this.fullName);
     if (this.suffix) parts.push(this.suffix);
-    
+
     return parts.join(' ');
   }
 
@@ -172,11 +172,9 @@ export class PersonName {
    */
   get lastFirst(): string {
     if (!this.surname) return this.fullName;
-    
-    const firstMiddle = [this.givenName, this.middleName]
-      .filter(Boolean)
-      .join(' ');
-    
+
+    const firstMiddle = [this.givenName, this.middleName].filter(Boolean).join(' ');
+
     return firstMiddle ? `${this.surname}, ${firstMiddle}` : this.surname;
   }
 
@@ -185,9 +183,9 @@ export class PersonName {
    */
   get initials(): string {
     const parts = [this.givenName, this.middleName, this.surname]
-      .filter(Boolean)
+      .filter((name): name is string => Boolean(name))
       .map(name => name.charAt(0).toUpperCase());
-    
+
     if (parts.length === 0 && this.displayName) {
       const displayParts = this.displayName.split(/\s+/);
       return displayParts
@@ -195,7 +193,7 @@ export class PersonName {
         .slice(0, 3) // Limit to 3 initials
         .join('');
     }
-    
+
     return parts.join('');
   }
 
@@ -260,29 +258,38 @@ export class PersonName {
     // Check if given names match
     if (this.givenName && other.givenName) {
       const givenMatch = this.givenName.toLowerCase() === other.givenName.toLowerCase();
-      const surnameMatch = this.surname && other.surname && 
-                          this.surname.toLowerCase() === other.surname.toLowerCase();
-      
+      const surnameMatch = Boolean(
+        this.surname && other.surname && this.surname.toLowerCase() === other.surname.toLowerCase()
+      );
+
       if (givenMatch && surnameMatch) return true;
-      
+
       // Check nickname vs given name
-      if ((this.nickname?.toLowerCase() === other.givenName.toLowerCase()) ||
-          (other.nickname?.toLowerCase() === this.givenName.toLowerCase())) {
+      if (
+        this.nickname?.toLowerCase() === other.givenName.toLowerCase() ||
+        other.nickname?.toLowerCase() === this.givenName.toLowerCase()
+      ) {
         return surnameMatch;
       }
     }
 
     // Check display name similarities
     if (this.displayName && other.displayName) {
-      const thisNormalized = this.displayName.toLowerCase().replace(/[^a-z\s]/g, '').trim();
-      const otherNormalized = other.displayName.toLowerCase().replace(/[^a-z\s]/g, '').trim();
-      
+      const thisNormalized = this.displayName
+        .toLowerCase()
+        .replace(/[^a-z\s]/g, '')
+        .trim();
+      const otherNormalized = other.displayName
+        .toLowerCase()
+        .replace(/[^a-z\s]/g, '')
+        .trim();
+
       if (thisNormalized === otherNormalized) return true;
-      
+
       // Check if one name is contained in another
       const words1 = thisNormalized.split(/\s+/);
       const words2 = otherNormalized.split(/\s+/);
-      
+
       const commonWords = words1.filter(word => words2.includes(word));
       return commonWords.length >= 2; // At least 2 words in common
     }
@@ -323,15 +330,17 @@ export class PersonName {
   /**
    * Creates a copy with updated components
    */
-  update(updates: Partial<{
-    givenName: string;
-    surname: string;
-    middleName: string;
-    displayName: string;
-    nickname: string;
-    title: string;
-    suffix: string;
-  }>): PersonName {
+  update(
+    updates: Partial<{
+      givenName: string;
+      surname: string;
+      middleName: string;
+      displayName: string;
+      nickname: string;
+      title: string;
+      suffix: string;
+    }>
+  ): PersonName {
     return new PersonName(
       updates.givenName ?? this.givenName,
       updates.surname ?? this.surname,
@@ -348,11 +357,11 @@ export class PersonName {
    */
   validate(): { isValid: boolean; errors: string[] } {
     const errors: string[] = [];
-    
+
     if (!this.hasAnyName()) {
       errors.push('At least one name component must be provided');
     }
-    
+
     // Check for reasonable length limits
     const maxLength = 100;
     if (this.givenName && this.givenName.length > maxLength) {
@@ -364,10 +373,10 @@ export class PersonName {
     if (this.displayName && this.displayName.length > maxLength * 2) {
       errors.push('Display name too long (max 200 characters)');
     }
-    
+
     return {
       isValid: errors.length === 0,
-      errors
+      errors,
     };
   }
 
@@ -395,7 +404,7 @@ export class PersonName {
       lastFirst: this.lastFirst,
       initials: this.initials,
       preferredName: this.preferredName,
-      sortKey: this.sortKey
+      sortKey: this.sortKey,
     };
   }
 

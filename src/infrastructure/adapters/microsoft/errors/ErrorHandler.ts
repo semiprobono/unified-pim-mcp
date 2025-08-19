@@ -1,5 +1,10 @@
 import { Logger } from '../../../../shared/logging/Logger.js';
-import { GraphError, GraphErrorCode, shouldRefreshToken, extractErrorDetails } from './GraphErrors.js';
+import {
+  extractErrorDetails,
+  GraphError,
+  GraphErrorCode,
+  shouldRefreshToken,
+} from './GraphErrors.js';
 
 /**
  * Error handling configuration
@@ -20,7 +25,7 @@ export class ErrorHandler {
     maxRetries: 3,
     retryDelayMs: 1000,
     exponentialBackoff: true,
-    logErrors: true
+    logErrors: true,
   };
 
   constructor(
@@ -71,8 +76,10 @@ export class ErrorHandler {
 
         // Calculate retry delay
         const delay = this.calculateRetryDelay(attempt, lastError);
-        this.logger.debug(`Retrying operation "${context}" in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
-        
+        this.logger.debug(
+          `Retrying operation "${context}" in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`
+        );
+
         await this.delay(delay);
       }
     }
@@ -89,7 +96,7 @@ export class ErrorHandler {
     }
 
     const details = extractErrorDetails(error);
-    
+
     return new GraphError(
       `${context}: ${details.message}`,
       details.code,
@@ -108,7 +115,7 @@ export class ErrorHandler {
     }
 
     const baseDelay = this.config.retryDelayMs || this.defaultConfig.retryDelayMs;
-    
+
     if (this.config.exponentialBackoff) {
       // Exponential backoff with jitter
       const exponentialDelay = baseDelay * Math.pow(2, attempt);
@@ -127,7 +134,7 @@ export class ErrorHandler {
       context,
       attempt: attempt + 1,
       maxRetries: maxRetries + 1,
-      error: error.toJSON()
+      error: error.toJSON(),
     };
 
     if (error.isAuthenticationError()) {
@@ -146,7 +153,10 @@ export class ErrorHandler {
   /**
    * Handle batch operation errors
    */
-  handleBatchErrors(responses: any[], operations: any[]): {
+  handleBatchErrors(
+    responses: any[],
+    operations: any[]
+  ): {
     successful: any[];
     failed: Array<{ operation: any; error: GraphError }>;
   } {
@@ -163,10 +173,10 @@ export class ErrorHandler {
           response.status,
           response.body?.error
         );
-        
+
         failed.push({
           operation: operations[index],
-          error
+          error,
         });
 
         if (this.config.logErrors) {
@@ -193,12 +203,15 @@ export class ErrorHandler {
       message: error.getUserMessage(),
       code: error.code,
       retryable: error.isRetryable,
-      details: process.env.NODE_ENV === 'development' ? {
-        originalMessage: error.message,
-        statusCode: error.statusCode,
-        requestId: error.requestId,
-        timestamp: error.date
-      } : undefined
+      details:
+        process.env.NODE_ENV === 'development'
+          ? {
+              originalMessage: error.message,
+              statusCode: error.statusCode,
+              requestId: error.requestId,
+              timestamp: error.date,
+            }
+          : undefined,
     };
   }
 
@@ -222,14 +235,14 @@ export class ErrorHandler {
       GraphErrorCode.INVALID_AUTH_TOKEN,
       GraphErrorCode.REQUEST_THROTTLED,
       GraphErrorCode.RESOURCE_NOT_FOUND,
-      GraphErrorCode.INVALID_REQUEST
+      GraphErrorCode.INVALID_REQUEST,
     ];
 
     let mostSevere = errors[0];
     for (const error of errors) {
       const currentIndex = severityOrder.indexOf(error.code as GraphErrorCode);
       const mostSevereIndex = severityOrder.indexOf(mostSevere.code as GraphErrorCode);
-      
+
       if (currentIndex !== -1 && (mostSevereIndex === -1 || currentIndex < mostSevereIndex)) {
         mostSevere = error;
       }
@@ -268,7 +281,7 @@ export class ErrorHandler {
     config: ErrorHandlerConfig;
   } {
     return {
-      config: { ...this.defaultConfig, ...this.config }
+      config: { ...this.defaultConfig, ...this.config },
     };
   }
 }
