@@ -56,11 +56,16 @@ export {
   TaskQueryOptions,
   TaskSearchResult,
   CreateTaskInput,
-  UpdateTaskInput
+  UpdateTaskInput,
+  FileService,
+  FileQueryOptions,
+  FileSearchResult,
+  FileMetadataInput,
+  SharePermissionsInput
 } from './services/index.js';
 
 // Mapper exports
-export { EmailMapper, CalendarMapper, ContactsMapper, TaskMapper } from './mappers/index.js';
+export { EmailMapper, CalendarMapper, ContactsMapper, TaskMapper, FileMapper } from './mappers/index.js';
 
 // Main adapter export
 export { GraphAdapter } from './GraphAdapter.js';

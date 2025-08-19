@@ -36,6 +36,7 @@ import {
   CalendarService,
   ContactsService,
   TaskService,
+  FileService,
 } from './index.js';
 
 /**
@@ -61,6 +62,7 @@ export class GraphAdapter implements PlatformPort {
   private calendarService?: CalendarService;
   private contactsService?: ContactsService;
   private taskService?: TaskService;
+  private fileService?: FileService;
   private userId?: string;
 
   constructor(
@@ -185,6 +187,11 @@ export class GraphAdapter implements PlatformPort {
       );
 
       this.taskService = new TaskService(
+        this.graphClient,
+        this.logger
+      );
+
+      this.fileService = new FileService(
         this.graphClient,
         this.logger
       );
@@ -1028,6 +1035,16 @@ export class GraphAdapter implements PlatformPort {
       throw new Error('Task service not initialized');
     }
     return this.taskService;
+  }
+
+  /**
+   * Get the file service instance
+   */
+  getFileService(): FileService {
+    if (!this.fileService) {
+      throw new Error('File service not initialized');
+    }
+    return this.fileService;
   }
 
   // File operations

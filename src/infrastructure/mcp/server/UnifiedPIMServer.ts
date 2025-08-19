@@ -950,6 +950,309 @@ export class UnifiedPIMServer {
           },
         },
       },
+      // File tools
+      {
+        name: 'pim_list_files',
+        description: 'List files in a folder or drive',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            folderId: {
+              type: 'string',
+              description: 'ID of the folder to list files from',
+            },
+            driveId: {
+              type: 'string',
+              description: 'ID of the drive (for SharePoint)',
+            },
+            searchQuery: {
+              type: 'string',
+              description: 'Search query to filter files',
+            },
+            limit: {
+              type: 'number',
+              default: 50,
+              description: 'Maximum number of files to return',
+            },
+            platform: {
+              type: 'string',
+              enum: ['microsoft', 'google', 'apple'],
+              default: 'microsoft',
+            },
+          },
+        },
+      },
+      {
+        name: 'pim_upload_file',
+        description: 'Upload a file (< 4MB)',
+        inputSchema: {
+          type: 'object',
+          required: ['content', 'filename'],
+          properties: {
+            content: {
+              type: 'string',
+              description: 'Base64 encoded file content',
+            },
+            filename: {
+              type: 'string',
+              description: 'Name of the file',
+            },
+            path: {
+              type: 'string',
+              description: 'Path where to upload the file',
+            },
+            parentId: {
+              type: 'string',
+              description: 'Parent folder ID',
+            },
+            mimeType: {
+              type: 'string',
+              description: 'MIME type of the file',
+            },
+            platform: {
+              type: 'string',
+              enum: ['microsoft', 'google', 'apple'],
+              default: 'microsoft',
+            },
+          },
+        },
+      },
+      {
+        name: 'pim_download_file',
+        description: 'Download a file',
+        inputSchema: {
+          type: 'object',
+          required: ['fileId'],
+          properties: {
+            fileId: {
+              type: 'string',
+              description: 'ID of the file to download',
+            },
+            driveId: {
+              type: 'string',
+              description: 'ID of the drive (for SharePoint)',
+            },
+            platform: {
+              type: 'string',
+              enum: ['microsoft', 'google', 'apple'],
+              default: 'microsoft',
+            },
+          },
+        },
+      },
+      {
+        name: 'pim_delete_file',
+        description: 'Delete a file',
+        inputSchema: {
+          type: 'object',
+          required: ['fileId'],
+          properties: {
+            fileId: {
+              type: 'string',
+              description: 'ID of the file to delete',
+            },
+            driveId: {
+              type: 'string',
+              description: 'ID of the drive (for SharePoint)',
+            },
+            permanent: {
+              type: 'boolean',
+              default: false,
+              description: 'Permanently delete the file',
+            },
+            platform: {
+              type: 'string',
+              enum: ['microsoft', 'google', 'apple'],
+              default: 'microsoft',
+            },
+          },
+        },
+      },
+      {
+        name: 'pim_upload_large_file',
+        description: 'Upload a large file (> 4MB) using chunked upload',
+        inputSchema: {
+          type: 'object',
+          required: ['content', 'filename', 'totalSize'],
+          properties: {
+            content: {
+              type: 'string',
+              description: 'Base64 encoded file content',
+            },
+            filename: {
+              type: 'string',
+              description: 'Name of the file',
+            },
+            totalSize: {
+              type: 'number',
+              description: 'Total size of the file in bytes',
+            },
+            path: {
+              type: 'string',
+              description: 'Path where to upload the file',
+            },
+            parentId: {
+              type: 'string',
+              description: 'Parent folder ID',
+            },
+            mimeType: {
+              type: 'string',
+              description: 'MIME type of the file',
+            },
+            platform: {
+              type: 'string',
+              enum: ['microsoft', 'google', 'apple'],
+              default: 'microsoft',
+            },
+          },
+        },
+      },
+      {
+        name: 'pim_search_files',
+        description: 'Search for files using semantic search',
+        inputSchema: {
+          type: 'object',
+          required: ['query'],
+          properties: {
+            query: {
+              type: 'string',
+              description: 'Search query',
+            },
+            driveId: {
+              type: 'string',
+              description: 'ID of the drive to search in',
+            },
+            limit: {
+              type: 'number',
+              default: 25,
+              description: 'Maximum number of results',
+            },
+            platform: {
+              type: 'string',
+              enum: ['microsoft', 'google', 'apple'],
+              default: 'microsoft',
+            },
+          },
+        },
+      },
+      {
+        name: 'pim_share_file',
+        description: 'Create a sharing link for a file',
+        inputSchema: {
+          type: 'object',
+          required: ['fileId', 'type'],
+          properties: {
+            fileId: {
+              type: 'string',
+              description: 'ID of the file to share',
+            },
+            type: {
+              type: 'string',
+              enum: ['view', 'edit', 'embed'],
+              description: 'Type of sharing link',
+            },
+            password: {
+              type: 'string',
+              description: 'Password for the sharing link',
+            },
+            expirationDays: {
+              type: 'number',
+              description: 'Number of days until link expires',
+            },
+            recipients: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Email addresses to send invitation to',
+            },
+            platform: {
+              type: 'string',
+              enum: ['microsoft', 'google', 'apple'],
+              default: 'microsoft',
+            },
+          },
+        },
+      },
+      {
+        name: 'pim_move_file',
+        description: 'Move a file to a new location',
+        inputSchema: {
+          type: 'object',
+          required: ['fileId', 'newParentId'],
+          properties: {
+            fileId: {
+              type: 'string',
+              description: 'ID of the file to move',
+            },
+            newParentId: {
+              type: 'string',
+              description: 'ID of the new parent folder',
+            },
+            driveId: {
+              type: 'string',
+              description: 'ID of the drive (for SharePoint)',
+            },
+            platform: {
+              type: 'string',
+              enum: ['microsoft', 'google', 'apple'],
+              default: 'microsoft',
+            },
+          },
+        },
+      },
+      {
+        name: 'pim_copy_file',
+        description: 'Copy a file to a new location',
+        inputSchema: {
+          type: 'object',
+          required: ['fileId', 'targetFolderId'],
+          properties: {
+            fileId: {
+              type: 'string',
+              description: 'ID of the file to copy',
+            },
+            targetFolderId: {
+              type: 'string',
+              description: 'ID of the target folder',
+            },
+            newName: {
+              type: 'string',
+              description: 'New name for the copied file',
+            },
+            driveId: {
+              type: 'string',
+              description: 'ID of the drive (for SharePoint)',
+            },
+            platform: {
+              type: 'string',
+              enum: ['microsoft', 'google', 'apple'],
+              default: 'microsoft',
+            },
+          },
+        },
+      },
+      {
+        name: 'pim_get_file_metadata',
+        description: 'Get detailed metadata for a file',
+        inputSchema: {
+          type: 'object',
+          required: ['fileId'],
+          properties: {
+            fileId: {
+              type: 'string',
+              description: 'ID of the file',
+            },
+            driveId: {
+              type: 'string',
+              description: 'ID of the drive (for SharePoint)',
+            },
+            platform: {
+              type: 'string',
+              enum: ['microsoft', 'google', 'apple'],
+              default: 'microsoft',
+            },
+          },
+        },
+      },
     ];
   }
 
@@ -1038,6 +1341,28 @@ export class UnifiedPIMServer {
           return await this.searchTasks(args);
         case 'pim_list_task_lists':
           return await this.listTaskLists(args);
+
+        // File tools
+        case 'pim_list_files':
+          return await this.listFiles(args);
+        case 'pim_upload_file':
+          return await this.uploadFile(args);
+        case 'pim_download_file':
+          return await this.downloadFile(args);
+        case 'pim_delete_file':
+          return await this.deleteFile(args);
+        case 'pim_upload_large_file':
+          return await this.uploadLargeFile(args);
+        case 'pim_search_files':
+          return await this.searchFiles(args);
+        case 'pim_share_file':
+          return await this.shareFile(args);
+        case 'pim_move_file':
+          return await this.moveFile(args);
+        case 'pim_copy_file':
+          return await this.copyFile(args);
+        case 'pim_get_file_metadata':
+          return await this.getFileMetadata(args);
 
         default:
           throw new Error(`Unknown tool: ${name}`);
@@ -3088,6 +3413,534 @@ Department: ${contact.organization?.department || 'N/A'}
           {
             type: 'text',
             text: `Error listing task lists: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          },
+        ],
+      };
+    }
+  }
+
+  /**
+   * List files in a folder or drive
+   */
+  private async listFiles(args: any): Promise<any> {
+    const { folderId, driveId, searchQuery, limit = 50, platform = 'microsoft' } = args;
+
+    try {
+      const adapter = this.platformManager.getAdapter(platform as Platform) as GraphAdapter;
+      if (!adapter || !adapter.isAuthenticated) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Not authenticated with ${platform}`,
+            },
+          ],
+        };
+      }
+
+      const fileService = adapter.getFileService();
+      const result = await fileService.listFiles({
+        folderId,
+        driveId,
+        searchQuery,
+        limit
+      });
+
+      const fileSummaries = result.files.map((file: any) => {
+        const icon = file.isFolder ? '📁' : '📄';
+        const size = file.isFolder ? '' : ` (${file.humanReadableSize})`;
+        return `${icon} ${file.name}${size}\n   ID: ${file.id}\n   Modified: ${file.lastModifiedDateTime.toLocaleString()}`;
+      });
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `📂 Files (${result.totalCount} total, showing ${result.files.length}):\n\n${fileSummaries.join('\n\n')}`,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Error listing files: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          },
+        ],
+      };
+    }
+  }
+
+  /**
+   * Upload a file
+   */
+  private async uploadFile(args: any): Promise<any> {
+    const { content, filename, path, parentId, mimeType, platform = 'microsoft' } = args;
+
+    try {
+      const adapter = this.platformManager.getAdapter(platform as Platform) as GraphAdapter;
+      if (!adapter || !adapter.isAuthenticated) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Not authenticated with ${platform}`,
+            },
+          ],
+        };
+      }
+
+      // Decode base64 content
+      const buffer = Buffer.from(content, 'base64');
+
+      const fileService = adapter.getFileService();
+      const file = await fileService.uploadFile(buffer, {
+        filename,
+        path,
+        parentId,
+        mimeType
+      });
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `✅ File uploaded successfully!\n\n📄 ${file.name}\nID: ${file.id}\nSize: ${file.humanReadableSize}\nURL: ${file.webUrl || 'N/A'}`,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Error uploading file: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          },
+        ],
+      };
+    }
+  }
+
+  /**
+   * Download a file
+   */
+  private async downloadFile(args: any): Promise<any> {
+    const { fileId, driveId, platform = 'microsoft' } = args;
+
+    try {
+      const adapter = this.platformManager.getAdapter(platform as Platform) as GraphAdapter;
+      if (!adapter || !adapter.isAuthenticated) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Not authenticated with ${platform}`,
+            },
+          ],
+        };
+      }
+
+      const fileService = adapter.getFileService();
+      const content = await fileService.downloadFile(fileId, driveId);
+      
+      // Get file info for name
+      const file = await fileService.getFile(fileId, driveId);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `✅ File downloaded successfully!\n\n📄 ${file.name}\nSize: ${file.humanReadableSize}\n\nContent (base64):\n${content.toString('base64')}`,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Error downloading file: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          },
+        ],
+      };
+    }
+  }
+
+  /**
+   * Delete a file
+   */
+  private async deleteFile(args: any): Promise<any> {
+    const { fileId, driveId, permanent = false, platform = 'microsoft' } = args;
+
+    try {
+      const adapter = this.platformManager.getAdapter(platform as Platform) as GraphAdapter;
+      if (!adapter || !adapter.isAuthenticated) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Not authenticated with ${platform}`,
+            },
+          ],
+        };
+      }
+
+      const fileService = adapter.getFileService();
+      await fileService.deleteFile(fileId, driveId, permanent);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `✅ File deleted successfully!\n\nFile ID: ${fileId}\nPermanent: ${permanent}`,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Error deleting file: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          },
+        ],
+      };
+    }
+  }
+
+  /**
+   * Upload a large file
+   */
+  private async uploadLargeFile(args: any): Promise<any> {
+    const { content, filename, totalSize, path, parentId, mimeType, platform = 'microsoft' } = args;
+
+    try {
+      const adapter = this.platformManager.getAdapter(platform as Platform) as GraphAdapter;
+      if (!adapter || !adapter.isAuthenticated) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Not authenticated with ${platform}`,
+            },
+          ],
+        };
+      }
+
+      // Decode base64 content
+      const buffer = Buffer.from(content, 'base64');
+      const { Readable } = require('stream');
+      const stream = Readable.from(buffer);
+
+      const fileService = adapter.getFileService();
+      const file = await fileService.uploadLargeFile(stream, {
+        filename,
+        path,
+        parentId,
+        mimeType
+      }, totalSize);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `✅ Large file uploaded successfully!\n\n📄 ${file.name}\nID: ${file.id}\nSize: ${file.humanReadableSize}\nURL: ${file.webUrl || 'N/A'}`,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Error uploading large file: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          },
+        ],
+      };
+    }
+  }
+
+  /**
+   * Search files
+   */
+  private async searchFiles(args: any): Promise<any> {
+    const { query, driveId, limit = 25, platform = 'microsoft' } = args;
+
+    try {
+      const adapter = this.platformManager.getAdapter(platform as Platform) as GraphAdapter;
+      if (!adapter || !adapter.isAuthenticated) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Not authenticated with ${platform}`,
+            },
+          ],
+        };
+      }
+
+      const fileService = adapter.getFileService();
+      const files = await fileService.searchFiles(query, { driveId, limit });
+
+      if (files.length === 0) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `No files found matching: "${query}"`,
+            },
+          ],
+        };
+      }
+
+      const fileSummaries = files.map((file: any) => {
+        const icon = file.isFolder ? '📁' : '📄';
+        const size = file.isFolder ? '' : ` (${file.humanReadableSize})`;
+        return `${icon} ${file.name}${size}\n   Path: ${file.path}\n   Modified: ${file.lastModifiedDateTime.toLocaleString()}`;
+      });
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `🔍 Search Results for "${query}" (${files.length} found):\n\n${fileSummaries.join('\n\n')}`,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Error searching files: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          },
+        ],
+      };
+    }
+  }
+
+  /**
+   * Share a file
+   */
+  private async shareFile(args: any): Promise<any> {
+    const { fileId, type, password, expirationDays, recipients, platform = 'microsoft' } = args;
+
+    try {
+      const adapter = this.platformManager.getAdapter(platform as Platform) as GraphAdapter;
+      if (!adapter || !adapter.isAuthenticated) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Not authenticated with ${platform}`,
+            },
+          ],
+        };
+      }
+
+      const fileService = adapter.getFileService();
+      
+      // Calculate expiration date
+      const expirationDateTime = expirationDays 
+        ? new Date(Date.now() + expirationDays * 24 * 60 * 60 * 1000)
+        : undefined;
+
+      const shareLink = await fileService.shareFile(fileId, {
+        type,
+        password,
+        expirationDateTime,
+        recipients,
+        sendInvitation: !!recipients
+      });
+
+      let result = `✅ File shared successfully!\n\n🔗 Share Link: ${shareLink.url}\nType: ${shareLink.type}`;
+      
+      if (password) {
+        result += `\n🔐 Password: ${password}`;
+      }
+      
+      if (expirationDateTime) {
+        result += `\n⏰ Expires: ${expirationDateTime.toLocaleDateString()}`;
+      }
+      
+      if (recipients && recipients.length > 0) {
+        result += `\n📧 Invitations sent to: ${recipients.join(', ')}`;
+      }
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: result,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Error sharing file: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          },
+        ],
+      };
+    }
+  }
+
+  /**
+   * Move a file
+   */
+  private async moveFile(args: any): Promise<any> {
+    const { fileId, newParentId, driveId, platform = 'microsoft' } = args;
+
+    try {
+      const adapter = this.platformManager.getAdapter(platform as Platform) as GraphAdapter;
+      if (!adapter || !adapter.isAuthenticated) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Not authenticated with ${platform}`,
+            },
+          ],
+        };
+      }
+
+      const fileService = adapter.getFileService();
+      const file = await fileService.moveFile(fileId, newParentId, driveId);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `✅ File moved successfully!\n\n📄 ${file.name}\nNew Path: ${file.path}\nID: ${file.id}`,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Error moving file: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          },
+        ],
+      };
+    }
+  }
+
+  /**
+   * Copy a file
+   */
+  private async copyFile(args: any): Promise<any> {
+    const { fileId, targetFolderId, newName, driveId, platform = 'microsoft' } = args;
+
+    try {
+      const adapter = this.platformManager.getAdapter(platform as Platform) as GraphAdapter;
+      if (!adapter || !adapter.isAuthenticated) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Not authenticated with ${platform}`,
+            },
+          ],
+        };
+      }
+
+      const fileService = adapter.getFileService();
+      const operationId = await fileService.copyFile(fileId, targetFolderId, newName, driveId);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `✅ File copy initiated!\n\nOperation ID: ${operationId}\nThe copy operation is running in the background.${newName ? `\nNew name: ${newName}` : ''}`,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Error copying file: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          },
+        ],
+      };
+    }
+  }
+
+  /**
+   * Get file metadata
+   */
+  private async getFileMetadata(args: any): Promise<any> {
+    const { fileId, driveId, platform = 'microsoft' } = args;
+
+    try {
+      const adapter = this.platformManager.getAdapter(platform as Platform) as GraphAdapter;
+      if (!adapter || !adapter.isAuthenticated) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Not authenticated with ${platform}`,
+            },
+          ],
+        };
+      }
+
+      const fileService = adapter.getFileService();
+      const metadata = await fileService.getFileMetadata(fileId, driveId);
+      const file = metadata.basic;
+
+      let result = `📊 File Metadata:\n\n`;
+      result += `📄 Name: ${file.name}\n`;
+      result += `🆔 ID: ${file.id}\n`;
+      result += `📁 Path: ${file.path}\n`;
+      result += `💾 Size: ${file.humanReadableSize}\n`;
+      result += `🎯 Type: ${file.fileType}\n`;
+      result += `📝 MIME: ${file.mimeType}\n`;
+      result += `📅 Created: ${new Date(file.createdDateTime).toLocaleString()}\n`;
+      result += `✏️ Modified: ${new Date(file.lastModifiedDateTime).toLocaleString()}\n`;
+      result += `👤 Created By: ${file.createdBy || 'Unknown'}\n`;
+      result += `👤 Modified By: ${file.lastModifiedBy || 'Unknown'}\n`;
+      
+      if (file.webUrl) {
+        result += `🔗 Web URL: ${file.webUrl}\n`;
+      }
+      
+      if (file.isShared) {
+        result += `\n🔗 Sharing: ${file.shareLinks?.length || 0} active links\n`;
+      }
+      
+      if (metadata.versions && metadata.versions.length > 1) {
+        result += `\n📚 Versions: ${metadata.versions.length} versions available\n`;
+      }
+      
+      if (metadata.permissions) {
+        result += `\n🔐 Permissions:\n`;
+        result += `  • Can Read: ${file.permissions.canRead ? '✅' : '❌'}\n`;
+        result += `  • Can Write: ${file.permissions.canWrite ? '✅' : '❌'}\n`;
+        result += `  • Can Delete: ${file.permissions.canDelete ? '✅' : '❌'}\n`;
+        result += `  • Can Share: ${file.permissions.canShare ? '✅' : '❌'}\n`;
+      }
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: result,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Error getting file metadata: ${error instanceof Error ? error.message : 'Unknown error'}`,
           },
         ],
       };

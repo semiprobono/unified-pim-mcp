@@ -25,4 +25,10 @@ export type {
   UpdateTaskInput
 } from './TaskService.js';
 
-// export { FileService } from './FileService.js';
+export { FileService } from './FileService.js';
+export type { 
+  FileQueryOptions, 
+  FileSearchResult,
+  FileMetadataInput,
+  SharePermissionsInput
+} from './FileService.js';

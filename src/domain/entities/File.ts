@@ -80,6 +80,18 @@ export interface File {
   readonly deletedDateTime?: Date | undefined;
   readonly deletedBy?: string | undefined;
   readonly metadata: FileMetadata;
+  
+  // Computed properties
+  readonly extension: string;
+  readonly nameWithoutExtension: string;
+  readonly fileType: 'document' | 'image' | 'video' | 'audio' | 'archive' | 'code' | 'other';
+  readonly humanReadableSize: string;
+  readonly latestVersion: FileVersion;
+  readonly isShared: boolean;
+  readonly hasActiveShareLinks: boolean;
+  readonly recentActivities: FileActivity[];
+  readonly canPreview: boolean;
+  readonly hasThumbnail: boolean;
 }
 
 export class FileEntity implements File {
