@@ -18,7 +18,8 @@ module.exports = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@domain/(.*)$': '<rootDir>/src/domain/$1',
-    '^@infrastructure/(.*)$': '<rootDir>/src/infrastructure/$1'
+    '^@infrastructure/(.*)$': '<rootDir>/src/infrastructure/$1',
+    '^(.+)\\.js$': '$1'
   },
   collectCoverageFrom: [
     'src/**/*.ts',

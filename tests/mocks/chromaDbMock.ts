@@ -153,6 +153,88 @@ export class MockChromaCollection {
     return this.documents.size;
   }
 
+  /**
+   * Test compatibility methods that match ChromaDbInitializer interface
+   */
+  async addDocuments(
+    collectionName: string,
+    documents: Array<{
+      id: string;
+      content: string;
+      metadata: Record<string, any>;
+    }>,
+    ids?: string[],
+    embeddings?: number[][]
+  ): Promise<void> {
+    // For mock, just store in current collection
+    const params = {
+      ids: ids || documents.map(doc => doc.id),
+      documents: documents.map(doc => doc.content),
+      metadatas: documents.map(doc => doc.metadata),
+      embeddings: embeddings,
+    };
+    await this.add(params);
+  }
+
+  async deleteDocuments(params: {
+    collection: string;
+    ids: string[];
+  }): Promise<void> {
+    await this.delete({ ids: params.ids });
+  }
+
+  async updateDocuments(
+    collectionName: string,
+    ids: string[],
+    documents: Array<{
+      content?: string;
+      metadata?: Record<string, any>;
+    }>
+  ): Promise<void> {
+    const params = {
+      ids,
+      documents: documents.map(doc => doc.content).filter(Boolean),
+      metadatas: documents.map(doc => doc.metadata).filter(Boolean),
+    };
+    await this.update(params);
+  }
+
+  async searchDocuments(
+    collectionName: string,
+    query: string,
+    options?: {
+      limit?: number;
+      where?: Record<string, any>;
+    }
+  ): Promise<Array<{
+    id: string;
+    content: string;
+    metadata: Record<string, any>;
+    distance?: number;
+  }>> {
+    const results = await this.query({
+      queryTexts: [query],
+      nResults: options?.limit || 10,
+      where: options?.where,
+      include: ['documents', 'metadatas', 'distances'],
+    });
+
+    if (!results.documents?.[0] || !results.ids?.[0]) {
+      return [];
+    }
+
+    return results.ids[0].map((id, index) => ({
+      id,
+      content: (results.documents?.[0]?.[index] as string) || '',
+      metadata: (results.metadatas?.[0]?.[index] as Record<string, any>) || {},
+      distance: results.distances?.[0]?.[index],
+    }));
+  }
+
+  async ensureCollection(name: string, config?: any): Promise<void> {
+    // Mock implementation - do nothing as collection already "exists"
+  }
+
   // Test utilities
   getName(): string {
     return this.name;
@@ -285,6 +367,78 @@ export class MockChromaClient {
 
   getCollection(name: string): MockChromaCollection | undefined {
     return this.collections.get(name);
+  }
+
+  /**
+   * Test compatibility methods that match ChromaDbInitializer interface
+   */
+  async addDocuments(
+    collectionName: string,
+    documents: Array<{
+      id: string;
+      content: string;
+      metadata: Record<string, any>;
+    }>,
+    ids?: string[],
+    embeddings?: number[][]
+  ): Promise<void> {
+    const collection = this.collections.get(collectionName);
+    if (!collection) {
+      throw new Error(`Collection ${collectionName} not found`);
+    }
+    await collection.addDocuments(collectionName, documents, ids, embeddings);
+  }
+
+  async deleteDocuments(params: {
+    collection: string;
+    ids: string[];
+  }): Promise<void> {
+    const collection = this.collections.get(params.collection);
+    if (!collection) {
+      throw new Error(`Collection ${params.collection} not found`);
+    }
+    await collection.deleteDocuments(params);
+  }
+
+  async updateDocuments(
+    collectionName: string,
+    ids: string[],
+    documents: Array<{
+      content?: string;
+      metadata?: Record<string, any>;
+    }>
+  ): Promise<void> {
+    const collection = this.collections.get(collectionName);
+    if (!collection) {
+      throw new Error(`Collection ${collectionName} not found`);
+    }
+    await collection.updateDocuments(collectionName, ids, documents);
+  }
+
+  async searchDocuments(
+    collectionName: string,
+    query: string,
+    options?: {
+      limit?: number;
+      where?: Record<string, any>;
+    }
+  ): Promise<Array<{
+    id: string;
+    content: string;
+    metadata: Record<string, any>;
+    distance?: number;
+  }>> {
+    const collection = this.collections.get(collectionName);
+    if (!collection) {
+      throw new Error(`Collection ${collectionName} not found`);
+    }
+    return collection.searchDocuments(collectionName, query, options);
+  }
+
+  async ensureCollection(name: string, config?: any): Promise<void> {
+    if (!this.collections.has(name)) {
+      await this.createCollection({ name, metadata: config?.metadata });
+    }
   }
 }
 
