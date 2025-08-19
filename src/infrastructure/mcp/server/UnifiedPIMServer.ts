@@ -9,8 +9,10 @@ import { DateRange } from '../../../domain/value-objects/DateRange.js';
 import { GraphAdapter } from '../../adapters/microsoft/GraphAdapter.js';
 import { EmailQueryOptions } from '../../adapters/microsoft/services/EmailService.js';
 import { CalendarQueryOptions } from '../../adapters/microsoft/services/CalendarService.js';
+import { NoteQueryOptions, CreateNotebookInput, CreateSectionInput, CreatePageInput, UpdateNoteInput } from '../../adapters/microsoft/services/NotesService.js';
 import { EmailAddress } from '../../../domain/value-objects/EmailAddress.js';
 import { Attendee } from '../../../domain/entities/CalendarEvent.js';
+import { NoteContent } from '../../../domain/entities/Note.js';
 
 /**
  * Main Unified PIM MCP Server implementation
@@ -1253,6 +1255,219 @@ export class UnifiedPIMServer {
           },
         },
       },
+      // OneNote tools
+      {
+        name: 'pim_list_notebooks',
+        description: 'List all OneNote notebooks',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            platform: {
+              type: 'string',
+              enum: ['microsoft', 'google', 'apple'],
+              default: 'microsoft',
+            },
+          },
+        },
+      },
+      {
+        name: 'pim_create_notebook',
+        description: 'Create a new OneNote notebook',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            name: { type: 'string', description: 'Notebook name' },
+            color: { type: 'string', description: 'Optional notebook color' },
+            isDefault: { type: 'boolean', default: false, description: 'Set as default notebook' },
+            platform: {
+              type: 'string',
+              enum: ['microsoft', 'google', 'apple'],
+              default: 'microsoft',
+            },
+          },
+          required: ['name'],
+        },
+      },
+      {
+        name: 'pim_delete_notebook',
+        description: 'Delete a OneNote notebook',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            notebookId: { type: 'string', description: 'Notebook ID to delete' },
+            platform: {
+              type: 'string',
+              enum: ['microsoft', 'google', 'apple'],
+              default: 'microsoft',
+            },
+          },
+          required: ['notebookId'],
+        },
+      },
+      {
+        name: 'pim_list_sections',
+        description: 'List sections in a OneNote notebook',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            notebookId: { type: 'string', description: 'Notebook ID' },
+            platform: {
+              type: 'string',
+              enum: ['microsoft', 'google', 'apple'],
+              default: 'microsoft',
+            },
+          },
+          required: ['notebookId'],
+        },
+      },
+      {
+        name: 'pim_create_section',
+        description: 'Create a new section in a OneNote notebook',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            name: { type: 'string', description: 'Section name' },
+            notebookId: { type: 'string', description: 'Notebook ID' },
+            sectionGroupId: { type: 'string', description: 'Optional section group ID' },
+            platform: {
+              type: 'string',
+              enum: ['microsoft', 'google', 'apple'],
+              default: 'microsoft',
+            },
+          },
+          required: ['name', 'notebookId'],
+        },
+      },
+      {
+        name: 'pim_list_pages',
+        description: 'List pages in a OneNote section with optional filtering',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            sectionId: { type: 'string', description: 'Section ID' },
+            level: { type: 'number', minimum: 0, maximum: 3, description: 'Filter by page level' },
+            parentPageId: { type: 'string', description: 'Filter by parent page ID' },
+            includeContent: { type: 'boolean', default: false, description: 'Include full content' },
+            tags: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Filter by tags',
+            },
+            limit: { type: 'number', default: 50, minimum: 1, maximum: 100 },
+            skip: { type: 'number', default: 0, minimum: 0 },
+            orderBy: { 
+              type: 'string',
+              enum: ['title', 'lastModifiedDateTime', 'createdDateTime', 'order'],
+              default: 'order'
+            },
+            orderDirection: { type: 'string', enum: ['asc', 'desc'], default: 'asc' },
+            platform: {
+              type: 'string',
+              enum: ['microsoft', 'google', 'apple'],
+              default: 'microsoft',
+            },
+          },
+          required: ['sectionId'],
+        },
+      },
+      {
+        name: 'pim_create_page',
+        description: 'Create a new page in a OneNote section',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            title: { type: 'string', description: 'Page title' },
+            content: { type: 'string', description: 'Page content (HTML)' },
+            sectionId: { type: 'string', description: 'Section ID' },
+            parentPageId: { type: 'string', description: 'Optional parent page ID for sub-pages' },
+            level: { type: 'number', minimum: 0, maximum: 3, default: 0, description: 'Page level (0-3)' },
+            order: { type: 'number', minimum: 0, default: 0, description: 'Page order within section' },
+            tags: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Page tags',
+            },
+            platform: {
+              type: 'string',
+              enum: ['microsoft', 'google', 'apple'],
+              default: 'microsoft',
+            },
+          },
+          required: ['title', 'content', 'sectionId'],
+        },
+      },
+      {
+        name: 'pim_get_page',
+        description: 'Get a specific OneNote page by ID',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            pageId: { type: 'string', description: 'Page ID' },
+            sectionId: { type: 'string', description: 'Optional section ID for optimization' },
+            includeContent: { type: 'boolean', default: true, description: 'Include full page content' },
+            platform: {
+              type: 'string',
+              enum: ['microsoft', 'google', 'apple'],
+              default: 'microsoft',
+            },
+          },
+          required: ['pageId'],
+        },
+      },
+      {
+        name: 'pim_update_page',
+        description: 'Update an existing OneNote page',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            pageId: { type: 'string', description: 'Page ID to update' },
+            sectionId: { type: 'string', description: 'Optional section ID for optimization' },
+            title: { type: 'string', description: 'Updated page title' },
+            content: { type: 'string', description: 'Updated page content (HTML)' },
+            tags: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Updated page tags',
+            },
+            order: { type: 'number', minimum: 0, description: 'Updated page order' },
+            platform: {
+              type: 'string',
+              enum: ['microsoft', 'google', 'apple'],
+              default: 'microsoft',
+            },
+          },
+          required: ['pageId'],
+        },
+      },
+      {
+        name: 'pim_search_notes',
+        description: 'Search OneNote pages using semantic search across all notebooks',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            query: { type: 'string', description: 'Search query' },
+            notebookId: { type: 'string', description: 'Optional: limit search to specific notebook' },
+            sectionId: { type: 'string', description: 'Optional: limit search to specific section' },
+            tags: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Filter by tags',
+            },
+            level: { type: 'number', minimum: 0, maximum: 3, description: 'Filter by page level' },
+            hasAttachments: { type: 'boolean', description: 'Filter by attachment presence' },
+            modifiedAfter: { type: 'string', format: 'date-time', description: 'Filter by modification date' },
+            modifiedBefore: { type: 'string', format: 'date-time', description: 'Filter by modification date' },
+            limit: { type: 'number', default: 25, minimum: 1, maximum: 100 },
+            includeContent: { type: 'boolean', default: false, description: 'Include full content in results' },
+            platform: {
+              type: 'string',
+              enum: ['microsoft', 'google', 'apple'],
+              default: 'microsoft',
+            },
+          },
+          required: ['query'],
+        },
+      },
     ];
   }
 
@@ -1363,6 +1578,28 @@ export class UnifiedPIMServer {
           return await this.copyFile(args);
         case 'pim_get_file_metadata':
           return await this.getFileMetadata(args);
+
+        // OneNote tools
+        case 'pim_list_notebooks':
+          return await this.listNotebooks(args);
+        case 'pim_create_notebook':
+          return await this.createNotebook(args);
+        case 'pim_delete_notebook':
+          return await this.deleteNotebook(args);
+        case 'pim_list_sections':
+          return await this.listSections(args);
+        case 'pim_create_section':
+          return await this.createSection(args);
+        case 'pim_list_pages':
+          return await this.listPages(args);
+        case 'pim_create_page':
+          return await this.createPage(args);
+        case 'pim_get_page':
+          return await this.getPage(args);
+        case 'pim_update_page':
+          return await this.updatePage(args);
+        case 'pim_search_notes':
+          return await this.searchNotes(args);
 
         default:
           throw new Error(`Unknown tool: ${name}`);
@@ -3941,6 +4178,486 @@ Department: ${contact.organization?.department || 'N/A'}
           {
             type: 'text',
             text: `Error getting file metadata: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          },
+        ],
+      };
+    }
+  }
+
+  // OneNote method implementations
+
+  /**
+   * List OneNote notebooks
+   */
+  private async listNotebooks(args: any): Promise<any> {
+    const platform = args.platform || 'microsoft';
+    
+    try {
+      const adapter = await this.platformManager.getAdapter(platform as Platform);
+      if (!adapter) {
+        throw new Error(`Platform ${platform} not available`);
+      }
+
+      const graphAdapter = adapter as GraphAdapter;
+      const notesService = graphAdapter.getNotesService();
+      
+      if (!notesService) {
+        throw new Error('Notes service not available');
+      }
+
+      const notebooks = await notesService.listNotebooks();
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(notebooks, null, 2),
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Error listing notebooks: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          },
+        ],
+      };
+    }
+  }
+
+  /**
+   * Create a new OneNote notebook
+   */
+  private async createNotebook(args: any): Promise<any> {
+    const platform = args.platform || 'microsoft';
+    
+    try {
+      const adapter = await this.platformManager.getAdapter(platform as Platform);
+      if (!adapter) {
+        throw new Error(`Platform ${platform} not available`);
+      }
+
+      const graphAdapter = adapter as GraphAdapter;
+      const notesService = graphAdapter.getNotesService();
+      
+      if (!notesService) {
+        throw new Error('Notes service not available');
+      }
+
+      const createData: CreateNotebookInput = {
+        name: args.name,
+        color: args.color,
+        isDefault: args.isDefault || false
+      };
+
+      const notebook = await notesService.createNotebook(createData);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Notebook created successfully:\n${JSON.stringify(notebook, null, 2)}`,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Error creating notebook: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          },
+        ],
+      };
+    }
+  }
+
+  /**
+   * Delete a OneNote notebook
+   */
+  private async deleteNotebook(args: any): Promise<any> {
+    const platform = args.platform || 'microsoft';
+    
+    try {
+      const adapter = await this.platformManager.getAdapter(platform as Platform);
+      if (!adapter) {
+        throw new Error(`Platform ${platform} not available`);
+      }
+
+      const graphAdapter = adapter as GraphAdapter;
+      const notesService = graphAdapter.getNotesService();
+      
+      if (!notesService) {
+        throw new Error('Notes service not available');
+      }
+
+      await notesService.deleteNotebook(args.notebookId);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Notebook ${args.notebookId} deleted successfully`,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Error deleting notebook: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          },
+        ],
+      };
+    }
+  }
+
+  /**
+   * List sections in a OneNote notebook
+   */
+  private async listSections(args: any): Promise<any> {
+    const platform = args.platform || 'microsoft';
+    
+    try {
+      const adapter = await this.platformManager.getAdapter(platform as Platform);
+      if (!adapter) {
+        throw new Error(`Platform ${platform} not available`);
+      }
+
+      const graphAdapter = adapter as GraphAdapter;
+      const notesService = graphAdapter.getNotesService();
+      
+      if (!notesService) {
+        throw new Error('Notes service not available');
+      }
+
+      const sections = await notesService.listSections(args.notebookId);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(sections, null, 2),
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Error listing sections: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          },
+        ],
+      };
+    }
+  }
+
+  /**
+   * Create a new section in a OneNote notebook
+   */
+  private async createSection(args: any): Promise<any> {
+    const platform = args.platform || 'microsoft';
+    
+    try {
+      const adapter = await this.platformManager.getAdapter(platform as Platform);
+      if (!adapter) {
+        throw new Error(`Platform ${platform} not available`);
+      }
+
+      const graphAdapter = adapter as GraphAdapter;
+      const notesService = graphAdapter.getNotesService();
+      
+      if (!notesService) {
+        throw new Error('Notes service not available');
+      }
+
+      const createData: CreateSectionInput = {
+        name: args.name,
+        notebookId: args.notebookId,
+        sectionGroupId: args.sectionGroupId
+      };
+
+      const section = await notesService.createSection(createData);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Section created successfully:\n${JSON.stringify(section, null, 2)}`,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Error creating section: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          },
+        ],
+      };
+    }
+  }
+
+  /**
+   * List pages in a OneNote section
+   */
+  private async listPages(args: any): Promise<any> {
+    const platform = args.platform || 'microsoft';
+    
+    try {
+      const adapter = await this.platformManager.getAdapter(platform as Platform);
+      if (!adapter) {
+        throw new Error(`Platform ${platform} not available`);
+      }
+
+      const graphAdapter = adapter as GraphAdapter;
+      const notesService = graphAdapter.getNotesService();
+      
+      if (!notesService) {
+        throw new Error('Notes service not available');
+      }
+
+      const queryOptions: NoteQueryOptions = {
+        level: args.level,
+        parentPageId: args.parentPageId,
+        includeContent: args.includeContent || false,
+        tags: args.tags,
+        limit: args.limit || 50,
+        skip: args.skip || 0,
+        orderBy: args.orderBy || 'order',
+        orderDirection: args.orderDirection || 'asc'
+      };
+
+      const result = await notesService.listPages(args.sectionId, queryOptions);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(result, null, 2),
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Error listing pages: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          },
+        ],
+      };
+    }
+  }
+
+  /**
+   * Create a new page in a OneNote section
+   */
+  private async createPage(args: any): Promise<any> {
+    const platform = args.platform || 'microsoft';
+    
+    try {
+      const adapter = await this.platformManager.getAdapter(platform as Platform);
+      if (!adapter) {
+        throw new Error(`Platform ${platform} not available`);
+      }
+
+      const graphAdapter = adapter as GraphAdapter;
+      const notesService = graphAdapter.getNotesService();
+      
+      if (!notesService) {
+        throw new Error('Notes service not available');
+      }
+
+      const content: NoteContent = {
+        htmlContent: args.content,
+        textContent: args.content.replace(/<[^>]*>/g, ''),
+        contentType: 'text/html'
+      };
+
+      const createData: CreatePageInput = {
+        title: args.title,
+        content,
+        sectionId: args.sectionId,
+        parentPageId: args.parentPageId,
+        level: args.level || 0,
+        order: args.order || 0,
+        tags: args.tags || []
+      };
+
+      const page = await notesService.createPage(createData);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Page created successfully:\n${JSON.stringify(page, null, 2)}`,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Error creating page: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          },
+        ],
+      };
+    }
+  }
+
+  /**
+   * Get a specific OneNote page
+   */
+  private async getPage(args: any): Promise<any> {
+    const platform = args.platform || 'microsoft';
+    
+    try {
+      const adapter = await this.platformManager.getAdapter(platform as Platform);
+      if (!adapter) {
+        throw new Error(`Platform ${platform} not available`);
+      }
+
+      const graphAdapter = adapter as GraphAdapter;
+      const notesService = graphAdapter.getNotesService();
+      
+      if (!notesService) {
+        throw new Error('Notes service not available');
+      }
+
+      const page = await notesService.getPage(
+        args.pageId, 
+        args.sectionId, 
+        args.includeContent !== false
+      );
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(page, null, 2),
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Error getting page: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          },
+        ],
+      };
+    }
+  }
+
+  /**
+   * Update an existing OneNote page
+   */
+  private async updatePage(args: any): Promise<any> {
+    const platform = args.platform || 'microsoft';
+    
+    try {
+      const adapter = await this.platformManager.getAdapter(platform as Platform);
+      if (!adapter) {
+        throw new Error(`Platform ${platform} not available`);
+      }
+
+      const graphAdapter = adapter as GraphAdapter;
+      const notesService = graphAdapter.getNotesService();
+      
+      if (!notesService) {
+        throw new Error('Notes service not available');
+      }
+
+      const updateData: UpdateNoteInput = {};
+      
+      if (args.title) updateData.title = args.title;
+      if (args.content) {
+        updateData.content = {
+          htmlContent: args.content,
+          textContent: args.content.replace(/<[^>]*>/g, ''),
+          contentType: 'text/html'
+        };
+      }
+      if (args.tags) updateData.tags = args.tags;
+      if (args.order !== undefined) updateData.order = args.order;
+
+      const page = await notesService.updatePage(args.pageId, updateData, args.sectionId);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Page updated successfully:\n${JSON.stringify(page, null, 2)}`,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Error updating page: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          },
+        ],
+      };
+    }
+  }
+
+  /**
+   * Search OneNote pages
+   */
+  private async searchNotes(args: any): Promise<any> {
+    const platform = args.platform || 'microsoft';
+    
+    try {
+      const adapter = await this.platformManager.getAdapter(platform as Platform);
+      if (!adapter) {
+        throw new Error(`Platform ${platform} not available`);
+      }
+
+      const graphAdapter = adapter as GraphAdapter;
+      const notesService = graphAdapter.getNotesService();
+      
+      if (!notesService) {
+        throw new Error('Notes service not available');
+      }
+
+      const queryOptions: NoteQueryOptions = {
+        notebookId: args.notebookId,
+        sectionId: args.sectionId,
+        tags: args.tags,
+        level: args.level,
+        hasAttachments: args.hasAttachments,
+        modifiedAfter: args.modifiedAfter ? new Date(args.modifiedAfter) : undefined,
+        modifiedBefore: args.modifiedBefore ? new Date(args.modifiedBefore) : undefined,
+        limit: args.limit || 25,
+        includeContent: args.includeContent || false
+      };
+
+      const notes = await notesService.searchNotes(args.query, queryOptions);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(notes, null, 2),
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Error searching notes: ${error instanceof Error ? error.message : 'Unknown error'}`,
           },
         ],
       };

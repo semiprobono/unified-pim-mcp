@@ -61,11 +61,18 @@ export {
   FileQueryOptions,
   FileSearchResult,
   FileMetadataInput,
-  SharePermissionsInput
+  SharePermissionsInput,
+  NotesService,
+  NoteQueryOptions,
+  NoteSearchResult,
+  CreateNotebookInput,
+  CreateSectionInput,
+  CreatePageInput,
+  UpdateNoteInput
 } from './services/index.js';
 
 // Mapper exports
-export { EmailMapper, CalendarMapper, ContactsMapper, TaskMapper, FileMapper } from './mappers/index.js';
+export { EmailMapper, CalendarMapper, ContactsMapper, TaskMapper, FileMapper, NotesMapper } from './mappers/index.js';
 
 // Main adapter export
 export { GraphAdapter } from './GraphAdapter.js';

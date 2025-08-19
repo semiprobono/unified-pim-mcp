@@ -6,7 +6,10 @@
       "Bash(npm run dev:*)",
       "Bash(grep:*)",
       "Bash(npm test:*)",
-      "Bash(pwsh:*)"
+      "Bash(pwsh:*)",
+      "WebFetch(domain:learn.microsoft.com)",
+      "Bash(npx tsc:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []

@@ -32,3 +32,13 @@ export type {
   FileMetadataInput,
   SharePermissionsInput
 } from './FileService.js';
+
+export { NotesService } from './NotesService.js';
+export type { 
+  NoteQueryOptions, 
+  NoteSearchResult,
+  CreateNotebookInput,
+  CreateSectionInput,
+  CreatePageInput,
+  UpdateNoteInput
+} from './NotesService.js';
