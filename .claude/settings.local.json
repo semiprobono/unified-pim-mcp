@@ -9,7 +9,8 @@
       "Bash(pwsh:*)",
       "WebFetch(domain:learn.microsoft.com)",
       "Bash(npx tsc:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(npm run test:unit:*)"
     ],
     "deny": [],
     "ask": []

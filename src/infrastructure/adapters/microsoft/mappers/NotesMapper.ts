@@ -144,7 +144,7 @@ export class NotesMapper {
   /**
    * Map content from Graph page
    */
-  private static mapContent(graphPage: any): NoteContent {
+  static mapContent(graphPage: any): NoteContent {
     const htmlContent = graphPage.content || '';
     const textContent = this.stripHtml(htmlContent);
     const wordCount = this.countWords(textContent);
@@ -164,7 +164,7 @@ export class NotesMapper {
   /**
    * Map attachments from Graph page
    */
-  private static mapAttachments(graphPage: any): NoteAttachment[] {
+  static mapAttachments(graphPage: any): NoteAttachment[] {
     if (!graphPage.attachments) return [];
 
     return graphPage.attachments.map((att: any) => ({
@@ -180,7 +180,7 @@ export class NotesMapper {
   /**
    * Extract content preview from full content
    */
-  private static extractContentPreview(content: string, maxLength: number = 200): string {
+  static extractContentPreview(content: string, maxLength: number = 200): string {
     if (!content) return '';
     
     const textContent = this.stripHtml(content);
@@ -192,8 +192,8 @@ export class NotesMapper {
   /**
    * Strip HTML tags to get plain text
    */
-  private static stripHtml(html: string): string {
-    if (!html) return '';
+  static stripHtml(html: string): string {
+    if (!html || typeof html !== 'string') return '';
     return html
       .replace(/<[^>]*>/g, '') // Remove HTML tags
       .replace(/&[^;]+;/g, ' ') // Replace HTML entities with spaces
@@ -204,7 +204,7 @@ export class NotesMapper {
   /**
    * Count words in text
    */
-  private static countWords(text: string): number {
+  static countWords(text: string): number {
     if (!text) return 0;
     return text.trim().split(/\s+/).filter(word => word.length > 0).length;
   }

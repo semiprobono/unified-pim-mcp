@@ -308,7 +308,8 @@ export class NotesService {
 
       const response = await this.graphClient.get(endpoint, params as GraphRequestOptions);
       const actualNotebookId = notebookId || response.parentNotebook?.id;
-      const section = NotesMapper.fromGraphSection(response, actualNotebookId);
+      const sectionGroupId = response.parentSectionGroup?.id;
+      const section = NotesMapper.fromGraphSection(response, actualNotebookId, sectionGroupId);
 
       // Cache the result
       await this.cacheManager?.set(cacheKey, section, endpoint, 'GET', this.CACHE_TTL);
@@ -750,6 +751,8 @@ export class NotesService {
             const section = await this.getSection(sectionId);
             const note = NotesMapper.fromGraphNoteMetadata(page, sectionId, section.notebookId);
             notes.push(note);
+          } else {
+            this.logger.warn('Failed to process recent note', { pageId: page.id, error: new Error('Page has no section information') });
           }
         } catch (error) {
           this.logger.warn('Failed to process recent note', { pageId: page.id, error });

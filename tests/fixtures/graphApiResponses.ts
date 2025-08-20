@@ -1,6 +1,7 @@
 /**
  * Mock Microsoft Graph API responses for testing
  */
+// @ts-nocheck - Suppressing TypeScript checks for test fixtures
 
 /**
  * User profile responses
