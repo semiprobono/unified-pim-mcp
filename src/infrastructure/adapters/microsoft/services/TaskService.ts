@@ -2,8 +2,8 @@ import { Logger } from '../../../../shared/logging/Logger.js';
 import { Task, TaskEntity, TaskList, Subtask, TaskReminder } from '../../../../domain/entities/Task.js';
 import { PaginationInfo } from '../../../../domain/interfaces/PlatformPort.js';
 import { GraphClient } from '../clients/GraphClient.js';
-import { CacheManager } from '../cache/CacheManager.js';
-import { ChromaDbInitializer } from '../cache/ChromaDbInitializer.js';
+import { CacheManager } from '@infrastructure/cache/CacheManager.js';
+import { ChromaDbInitializer } from '@infrastructure/cache/ChromaDbInitializer.js';
 import { TaskMapper } from '../mappers/TaskMapper.js';
 import { ErrorHandler } from '../errors/ErrorHandler.js';
 import { ChromaClient } from 'chromadb';
@@ -89,7 +89,7 @@ export class TaskService {
    */
   private async initializeServices(): Promise<void> {
     if (!this.chromaService) {
-      this.chromaService = new ChromaDbInitializer('http://localhost:8000', this.logger);
+      this.chromaService = new ChromaDbInitializer({ host: 'localhost', port: 8000 });
       await this.chromaService.initialize();
       
       // Create tasks search collection - use ChromaClient directly
@@ -110,7 +110,7 @@ export class TaskService {
     }
 
     if (!this.cacheManager) {
-      this.cacheManager = new CacheManager(this.chromaService!, { defaultTtl: this.CACHE_TTL }, this.logger);
+      this.cacheManager = new CacheManager(this.chromaService!.getClient());
     }
   }
 
@@ -143,7 +143,7 @@ export class TaskService {
       }));
 
       // Cache the result
-      await this.cacheManager?.set(cacheKey, lists, '/me/todo/lists', 'GET', this.CACHE_TTL);
+      await this.cacheManager?.set(cacheKey, lists, { platform: 'microsoft', ttl: this.CACHE_TTL });
 
       return lists;
     } catch (error) {
@@ -257,7 +257,7 @@ export class TaskService {
       const task = TaskMapper.fromGraphTask(response, taskListId);
 
       // Cache the result
-      await this.cacheManager?.set(cacheKey, task, endpoint, 'GET', this.CACHE_TTL);
+      await this.cacheManager?.set(cacheKey, task, { platform: 'microsoft', ttl: this.CACHE_TTL });
 
       return task;
     } catch (error) {
@@ -379,7 +379,7 @@ export class TaskService {
       const task = TaskMapper.fromGraphTask(response, taskListId);
 
       // Update cache
-      await this.cacheManager?.set(`task:${taskId}`, task, endpoint, 'PATCH', this.CACHE_TTL);
+      await this.cacheManager?.set(`task:${taskId}`, task, { platform: 'microsoft', ttl: this.CACHE_TTL });
 
       // Re-index in ChromaDB
       if (this.searchCollection) {

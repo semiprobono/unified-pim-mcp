@@ -6,8 +6,8 @@ import {
   SearchCriteria,
 } from '../../../../domain/interfaces/PlatformPort.js';
 import { GraphClient } from '../clients/GraphClient.js';
-import { CacheManager } from '../cache/CacheManager.js';
-import { ChromaDbInitializer } from '../cache/ChromaDbInitializer.js';
+import { CacheManager } from '@infrastructure/cache/CacheManager.js';
+import { ChromaDbInitializer } from '@infrastructure/cache/ChromaDbInitializer.js';
 import { ContactsMapper } from '../mappers/ContactsMapper.js';
 import { ErrorHandler } from '../errors/ErrorHandler.js';
 
@@ -74,7 +74,7 @@ export class ContactsService {
         this.logger.debug(`Contact ${id} retrieved from cache`);
         return {
           success: true,
-          data: cached,
+          data: cached as Contact,
         };
       }
 

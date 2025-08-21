@@ -25,8 +25,8 @@ export {
   CacheEntry,
   SearchIndexEntry,
   SyncMetadata,
-} from './cache/ChromaDbInitializer.js';
-export { CacheManager, CacheConfig } from './cache/CacheManager.js';
+} from '@infrastructure/cache/ChromaDbInitializer.js';
+export { CacheManager, CacheManagerConfig } from '@infrastructure/cache/CacheManager.js';
 
 // Error exports
 export {

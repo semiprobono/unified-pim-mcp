@@ -2,8 +2,8 @@ import { Logger } from '../../../../shared/logging/Logger.js';
 import { Note, NoteEntity, Notebook, Section, Page, NoteContent, NoteAttachment } from '../../../../domain/entities/Note.js';
 import { PaginationInfo } from '../../../../domain/interfaces/PlatformPort.js';
 import { GraphClient } from '../clients/GraphClient.js';
-import { CacheManager } from '../cache/CacheManager.js';
-import { ChromaDbInitializer } from '../cache/ChromaDbInitializer.js';
+import { CacheManager } from '@infrastructure/cache/CacheManager.js';
+import { ChromaDbInitializer } from '@infrastructure/cache/ChromaDbInitializer.js';
 import { NotesMapper } from '../mappers/NotesMapper.js';
 import { ErrorHandler } from '../errors/ErrorHandler.js';
 import { ChromaClient } from 'chromadb';
@@ -108,7 +108,7 @@ export class NotesService {
    */
   private async initializeServices(): Promise<void> {
     if (!this.chromaService) {
-      this.chromaService = new ChromaDbInitializer('http://localhost:8000', this.logger);
+      this.chromaService = new ChromaDbInitializer({ host: 'localhost', port: 8000 });
       await this.chromaService.initialize();
       
       // Create notes search collection - use ChromaClient directly
@@ -129,7 +129,7 @@ export class NotesService {
     }
 
     if (!this.cacheManager) {
-      this.cacheManager = new CacheManager(this.chromaService!, { defaultTtl: this.CACHE_TTL }, this.logger);
+      this.cacheManager = new CacheManager(this.chromaService!.getClient());
     }
   }
 
@@ -161,7 +161,7 @@ export class NotesService {
       );
 
       // Cache the result
-      await this.cacheManager?.set(cacheKey, notebooks, '/me/onenote/notebooks', 'GET', this.CACHE_TTL);
+      await this.cacheManager?.set(cacheKey, notebooks, { platform: 'microsoft', ttl: this.CACHE_TTL });
 
       return notebooks;
     } catch (error) {
@@ -195,7 +195,7 @@ export class NotesService {
       const notebook = NotesMapper.fromGraphNotebook(response);
 
       // Cache the result
-      await this.cacheManager?.set(cacheKey, notebook, endpoint, 'GET', this.CACHE_TTL);
+      await this.cacheManager?.set(cacheKey, notebook, { platform: 'microsoft', ttl: this.CACHE_TTL });
 
       return notebook;
     } catch (error) {
@@ -276,7 +276,7 @@ export class NotesService {
       );
 
       // Cache the result
-      await this.cacheManager?.set(cacheKey, sections, endpoint, 'GET', this.CACHE_TTL);
+      await this.cacheManager?.set(cacheKey, sections, { platform: 'microsoft', ttl: this.CACHE_TTL });
 
       return sections;
     } catch (error) {
@@ -312,7 +312,7 @@ export class NotesService {
       const section = NotesMapper.fromGraphSection(response, actualNotebookId, sectionGroupId);
 
       // Cache the result
-      await this.cacheManager?.set(cacheKey, section, endpoint, 'GET', this.CACHE_TTL);
+      await this.cacheManager?.set(cacheKey, section, { platform: 'microsoft', ttl: this.CACHE_TTL });
 
       return section;
     } catch (error) {
@@ -496,7 +496,7 @@ export class NotesService {
         : NotesMapper.fromGraphNoteMetadata(response, actualSectionId, notebookId);
 
       // Cache the result
-      await this.cacheManager?.set(cacheKey, note, endpoint, 'GET', this.CACHE_TTL);
+      await this.cacheManager?.set(cacheKey, note, { platform: 'microsoft', ttl: this.CACHE_TTL });
 
       return note;
     } catch (error) {
@@ -594,7 +594,7 @@ export class NotesService {
       const note = await this.getPage(pageId, sectionId, true);
 
       // Update cache
-      await this.cacheManager?.set(`page:${pageId}:full`, note, endpoint, 'PATCH', this.CACHE_TTL);
+      await this.cacheManager?.set(`page:${pageId}:full`, note, { platform: 'microsoft', ttl: this.CACHE_TTL });
 
       // Re-index in ChromaDB
       if (this.searchCollection) {

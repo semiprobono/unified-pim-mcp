@@ -18,7 +18,8 @@ import { Logger } from './shared/logging/Logger.js';
 import { ErrorHandler } from './shared/error/ErrorHandler.js';
 import { HealthMonitor } from './shared/monitoring/HealthMonitor.js';
 import { PlatformAdapterManager } from './infrastructure/adapters/PlatformAdapterManager.js';
-import { CacheManager } from './infrastructure/cache/CacheManager.js';
+import { CacheManager } from '@infrastructure/cache/CacheManager.js';
+import { ChromaClient } from 'chromadb';
 import { SecurityManager } from './shared/security/SecurityManager.js';
 import { ResilienceManager } from './shared/resilience/ResilienceManager.js';
 
@@ -98,7 +99,11 @@ class UnifiedPIMMain {
     await this.resilienceManager.initialize();
 
     // Cache Manager
-    this.cacheManager = new CacheManager(this.configManager.getConfig('cache'), this.logger);
+    const cacheConfig = this.configManager.getConfig('cache');
+    const chromaClient = new ChromaClient({
+      path: `http://${cacheConfig.chromadb?.host || 'localhost'}:${cacheConfig.chromadb?.port || 8000}`
+    });
+    this.cacheManager = new CacheManager(chromaClient);
     await this.cacheManager.initialize();
 
     // Platform Adapter Manager

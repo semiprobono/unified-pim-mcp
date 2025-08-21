@@ -1,6 +1,6 @@
 import { Resource, Tool } from '@modelcontextprotocol/sdk/types.js';
 import { PlatformAdapterManager } from '../../adapters/PlatformAdapterManager.js';
-import { CacheManager } from '../../cache/CacheManager.js';
+import { CacheManager } from '@infrastructure/cache/CacheManager.js';
 import { SecurityManager } from '../../../shared/security/SecurityManager.js';
 import { Logger } from '../../../shared/logging/Logger.js';
 import { ErrorHandler } from '../../../shared/error/ErrorHandler.js';

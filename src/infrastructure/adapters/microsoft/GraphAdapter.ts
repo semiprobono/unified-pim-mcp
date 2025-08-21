@@ -131,20 +131,16 @@ export class GraphAdapter implements PlatformPort {
       );
 
       // Initialize ChromaDB
-      const chromaUrl = this.configManager.getConfig('cache').chromadb.url;
-      this.chromaDb = new ChromaDbInitializer(chromaUrl, this.logger);
+      const chromaConfig = this.configManager.getConfig('cache').chromadb;
+      this.chromaDb = new ChromaDbInitializer({ 
+        host: chromaConfig.host || 'localhost', 
+        port: chromaConfig.port || 8000,
+        ssl: chromaConfig.ssl || false
+      });
       await this.chromaDb.initialize();
 
       // Initialize cache manager
-      this.cacheManager = new CacheManager(
-        this.chromaDb,
-        {
-          defaultTtl: 300000, // 5 minutes
-          maxSize: 1000,
-          cleanupInterval: 300000,
-        },
-        this.logger
-      );
+      this.cacheManager = new CacheManager(this.chromaDb.getClient());
 
       // Initialize Graph client
       this.graphClient = new GraphClient(

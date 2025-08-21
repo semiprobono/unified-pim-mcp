@@ -2,7 +2,7 @@ import { Platform } from '../../domain/value-objects/Platform.js';
 import { PlatformPort } from '../../domain/interfaces/PlatformPort.js';
 import { SecurityManager } from '../../shared/security/SecurityManager.js';
 import { ResilienceManager } from '../../shared/resilience/ResilienceManager.js';
-import { CacheManager } from '../cache/CacheManager.js';
+import { CacheManager } from '@infrastructure/cache/CacheManager.js';
 import { Logger } from '../../shared/logging/Logger.js';
 import { ConfigManager } from '../../shared/config/ConfigManager.js';
 import { GraphAdapter } from './microsoft/GraphAdapter.js';

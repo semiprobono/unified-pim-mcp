@@ -1,16 +1,14 @@
 {
   "permissions": {
     "allow": [
-      "Bash(touch:*)",
-      "Bash(npm run build:*)",
-      "Bash(npm run dev:*)",
-      "Bash(grep:*)",
       "Bash(npm test:*)",
-      "Bash(pwsh:*)",
-      "WebFetch(domain:learn.microsoft.com)",
+      "Bash(npm run:*)",
       "Bash(npx tsc:*)",
-      "Bash(git add:*)",
-      "Bash(npm run test:unit:*)"
+      "Bash(pwsh:*)",
+      "Bash(git:*)",
+      "Bash(node:*)",
+      "WebFetch(domain:www.aitmpl.com)",
+      "Bash(dir \"C:\\Users\\brand\\unified-pim-mcp\\.claude\" /B)"
     ],
     "deny": [],
     "ask": []

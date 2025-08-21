@@ -2,8 +2,8 @@ import { Logger } from '../../../../shared/logging/Logger.js';
 import { File, FileEntity, FilePermissions, ShareLink } from '../../../../domain/entities/File.js';
 import { PaginationInfo } from '../../../../domain/interfaces/PlatformPort.js';
 import { GraphClient } from '../clients/GraphClient.js';
-import { CacheManager } from '../cache/CacheManager.js';
-import { ChromaDbInitializer } from '../cache/ChromaDbInitializer.js';
+import { CacheManager } from '@infrastructure/cache/CacheManager.js';
+import { ChromaDbInitializer } from '@infrastructure/cache/ChromaDbInitializer.js';
 import { FileMapper } from '../mappers/FileMapper.js';
 import { ErrorHandler } from '../errors/ErrorHandler.js';
 import { ChromaClient } from 'chromadb';
@@ -106,7 +106,7 @@ export class FileService {
    */
   private async initializeServices(): Promise<void> {
     if (!this.chromaService) {
-      this.chromaService = new ChromaDbInitializer('http://localhost:8000', this.logger);
+      this.chromaService = new ChromaDbInitializer({ host: 'localhost', port: 8000 });
       await this.chromaService.initialize();
       
       // Create file metadata search collection
@@ -127,7 +127,7 @@ export class FileService {
     }
 
     if (!this.cacheManager) {
-      this.cacheManager = new CacheManager(this.chromaService!, { defaultTtl: this.CACHE_TTL }, this.logger);
+      this.cacheManager = new CacheManager(this.chromaService!.getClient());
     }
   }
 
@@ -220,7 +220,7 @@ export class FileService {
       };
 
       // Cache the result
-      await this.cacheManager?.set(cacheKey, result, endpoint, 'GET', this.CACHE_TTL);
+      await this.cacheManager?.set(cacheKey, result, { platform: 'microsoft', ttl: this.CACHE_TTL });
 
       return result;
     } catch (error) {
@@ -257,7 +257,7 @@ export class FileService {
       const file = FileMapper.fromGraphDriveItem(response);
 
       // Cache the result
-      await this.cacheManager?.set(cacheKey, file, endpoint, 'GET', this.CACHE_TTL);
+      await this.cacheManager?.set(cacheKey, file, { platform: 'microsoft', ttl: this.CACHE_TTL });
 
       return file;
     } catch (error) {
@@ -631,7 +631,7 @@ export class FileService {
       const file = FileMapper.fromGraphDriveItem(response);
 
       // Update cache
-      await this.cacheManager?.set(`file:${fileId}`, file, endpoint, 'PATCH', this.CACHE_TTL);
+      await this.cacheManager?.set(`file:${fileId}`, file, { platform: 'microsoft', ttl: this.CACHE_TTL });
 
       // Re-index in ChromaDB
       if (this.searchCollection) {
